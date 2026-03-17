@@ -1,15 +1,17 @@
-'''
+"""
 说明：此代码的作用是，输入一个图片文件夹，还是用训练好的检测模型，检测到样本集里的所有目标样本；
-    然后将带目标的样本，保存到给定目录下；
+    然后将带目标的样本，保存到给定目录下；.
 
 作用：抽取有效目标样本，扩充训练集
 
-'''
+"""
 
-import os
-from ultralytics import YOLO
-import cv2
 import argparse
+import os
+
+import cv2
+
+from ultralytics import YOLO
 
 
 def run_inference(model_path, imgs_dir, save_dir):
@@ -20,7 +22,7 @@ def run_inference(model_path, imgs_dir, save_dir):
     os.makedirs(save_dir, exist_ok=True)
 
     # 支持的图片格式
-    exts = ('.jpg', '.jpeg', '.png', '.bmp')
+    exts = (".jpg", ".jpeg", ".png", ".bmp")
 
     # 遍历目录下所有图片
     for img_name in os.listdir(imgs_dir):
@@ -49,7 +51,7 @@ def run_inference(model_path, imgs_dir, save_dir):
         #                 cv2.FONT_HERSHEY_SIMPLEX,
         #                 0.5, (0, 255, 0), 2)
 
-        if len(results.boxes)>0:
+        if len(results.boxes) > 0:
             # 保存结果
             save_path = os.path.join(save_dir, img_name)
             cv2.imwrite(save_path, img)
@@ -74,7 +76,6 @@ if __name__ == "__main__":
     run_inference(args.model_path, args.imgs_dir, args.save_dir)
     # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_v3/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_images_test --save_dir ./results/carpet
     # python /home/chenkejing/PycharmProjects/ultralytics/Myself_inference_model/predict_images_save_exist_object_image.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_v3/weights/best.pt --imgs_dir /home/chenkejing/Downloads/homeobjects-3K/images/train --save_dir /home/chenkejing/database/carpetDatabase/EMdoorRealCarpetDatabase/origin_public_carpet_database/add_images_homeobjects_3k
-
 
     """
     python3 /home/chenkejing/PycharmProjects/ultralytics/Myself_inference_model/predict_images_save_exist_object_image.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.pt --imgs_dir /home/chenkejing/Desktop/hand_detect --save_dir /home/chenkejing/PycharmProjects/ultralytics/results/hand_focus_sa_v2

@@ -1,16 +1,18 @@
-'''
+"""
 说明：此代码的作用是，输入一个图片文件夹，使用训练好的检测模型，检测样本集里的所有目标样本；
-然后将带目标的样本，保存到给定目录下；
+然后将带目标的样本，保存到给定目录下；.
 
 作用：抽取有效目标样本，扩充训练集
-'''
+"""
 
-import os
-from ultralytics import YOLO
-import cv2
 import argparse
-from tqdm import tqdm
+import os
+
+import cv2
 import torch  # 用于设备选择
+from tqdm import tqdm
+
+from ultralytics import YOLO
 
 
 def run_inference(model_path, imgs_dir, save_dir):
@@ -26,13 +28,10 @@ def run_inference(model_path, imgs_dir, save_dir):
     os.makedirs(save_dir, exist_ok=True)
 
     # 支持的图片格式
-    exts = ('.jpg', '.jpeg', '.png', '.bmp')
+    exts = (".jpg", ".jpeg", ".png", ".bmp")
 
     # 先过滤出所有图片（用于进度条）
-    img_list = [
-        img_name for img_name in os.listdir(imgs_dir)
-        if img_name.lower().endswith(exts)
-    ]
+    img_list = [img_name for img_name in os.listdir(imgs_dir) if img_name.lower().endswith(exts)]
 
     # 计数器：检测到目标/未检测到目标
     detected_count = 0
@@ -71,10 +70,7 @@ def run_inference(model_path, imgs_dir, save_dir):
                 undetected_count += 1
 
             # 更新 tqdm 显示动态计数
-            pbar.set_postfix({
-                "Detected": detected_count,
-                "Undetected": undetected_count
-            })
+            pbar.set_postfix({"Detected": detected_count, "Undetected": undetected_count})
 
 
 def parse_args():
