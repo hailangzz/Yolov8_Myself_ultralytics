@@ -59,11 +59,7 @@ yolo segment train \
 """
 
 
-
-from ultralytics import YOLO
-
 if __name__ == "__main__":
-
     # 1️⃣ 加载分割模型结构（seg）
     model = YOLO("/home/chenkejing/PycharmProjects/ultralytics/ultralytics/cfg/models/v8/yolov8-seg_focus_wire.yaml")
 
@@ -73,23 +69,22 @@ if __name__ == "__main__":
 
     # 3️⃣ 开始训练
     results = model.train(
-        task="segment",                 # ⭐ 必须指定
-        data="coco8-seg_wire.yaml",      # 分割数据集 yaml
+        task="segment",  # ⭐ 必须指定
+        data="coco8-seg_wire.yaml",  # 分割数据集 yaml
         epochs=300,
         imgsz=640,
-        batch=30,                       # seg 比 detect 更吃显存
-        device=0,                       # -1 = CPU，0 = GPU
+        batch=30,  # seg 比 detect 更吃显存
+        device=0,  # -1 = CPU，0 = GPU
         workers=0,
-
-        optimizer="SGD",                # ⭐ 稳定，利于部署
+        optimizer="SGD",  # ⭐ 稳定，利于部署
         cos_lr=True,
-        amp=False,                      # ⭐ ONNX/RKNN 强烈建议关  /amp 控制的是「训得快不快 vs 稳不稳」
+        amp=False,  # ⭐ ONNX/RKNN 强烈建议关  /amp 控制的是「训得快不快 vs 稳不稳」
         augment=True,
         dropout=0.1,
         project="runs/my_wire_seg_exp",
         name="yolov8s_wire_seg_v1_",
         # resume=False                    # 控制的是「训不训旧的状态」
-        resume=True
+        resume=True,
     )
 
     # watch -n 1 nvidia-smi #监控GPU占用信息
