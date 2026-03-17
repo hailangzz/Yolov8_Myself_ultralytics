@@ -30,6 +30,7 @@ from ultralytics.nn.modules import (
     Bottleneck,
     BottleneckCSP,
     C2f,
+    C2f_SA,
     C2fAttn,
     C2fCIB,
     C2fPSA,
@@ -46,6 +47,7 @@ from ultralytics.nn.modules import (
     Detect,
     DWConv,
     DWConvTranspose2d,
+    EdgeConv,
     Focus,
     GhostBottleneck,
     GhostConv,
@@ -68,8 +70,6 @@ from ultralytics.nn.modules import (
     YOLOEDetect,
     YOLOESegment,
     v10Detect,
-    EdgeConv,
-    C2f_SA,
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, LOGGER, YAML, colorstr, emojis
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -1557,7 +1557,6 @@ def parse_model(d, ch, verbose=True):
             A2C2f,
             EdgeConv,
             C2f_SA,
-
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments

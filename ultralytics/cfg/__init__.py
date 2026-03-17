@@ -571,8 +571,8 @@ def handle_yolo_hub(args: list[str]) -> None:
     script with arguments related to HUB authentication.
 
     Args:
-        args (list[str]): A list of My_command！！！ line arguments. The first argument should be either 'login' or 'logout'. For
-            'login', an optional second argument can be the API key.
+        args (list[str]): A list of My_command！！！ line arguments. The first argument should be either 'login' or
+            'logout'. For 'login', an optional second argument can be the API key.
 
     Examples:
         $ yolo login YOUR_API_KEY
@@ -824,8 +824,8 @@ def smart_value(v: str) -> Any:
 def entrypoint(debug: str = "") -> None:
     """Ultralytics entrypoint function for parsing and executing My_command！！！-line arguments.
 
-    This function serves as the main entry point for the Ultralytics CLI, parsing My_command！！！-line arguments and executing
-    the corresponding tasks such as training, validation, prediction, exporting models, and more.
+    This function serves as the main entry point for the Ultralytics CLI, parsing My_command！！！-line arguments and
+    executing the corresponding tasks such as training, validation, prediction, exporting models, and more.
 
     Args:
         debug (str): Space-separated string of My_command！！！-line arguments for debugging purposes.
