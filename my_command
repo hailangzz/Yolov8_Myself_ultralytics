@@ -1,0 +1,131 @@
+模型训练：
+
+    训练yolov8s模型
+    /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/train_yolov8.py
+
+    训练yolov8s_focus模型
+    /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/train_yolov8s_focus.py
+
+    训练地毯检测模型：
+    /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/train_yolov8s_focus_sa_carpet.py
+
+    训练手势检测模型：
+
+
+样本测试：
+    /home/chenkejing/PycharmProjects/ultralytics/predict_detect_images.py
+
+    测试地毯检测模型：
+    python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_sa_v2/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image --save_dir ./results/carpet
+
+    python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_exp/yolov8_focus_v12/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image --save_dir ./results/carpet
+
+    #测试手势识别模型
+    python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v3/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/hand_real_image --save_dir ./results/hand
+
+    #3月9号 /home/chenkejing/Desktop/hand_detect
+    python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_3/weights/best.pt  --imgs_dir /home/chenkejing/Desktop/rgb_images --save_dir ./results/hand_focus_sa_v3
+
+    python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8_focus_sa_v3_5/weights/last.pt --imgs_dir /home/chenkejing/Desktop/rgb_images --save_dir ./results/hand_focus_sa_v3
+
+    python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8_focus_sa_v3_5/weights/last.pt --imgs_dir /home/chenkejing/Desktop/capture_images --save_dir ./results/hand_focus_sa_v3
+
+     python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8_focus_sa_v3_5/weights/last.pt --imgs_dir /home/chenkejing/Downloads/hand_detect_0312 --save_dir ./results/hand_focus_sa_v3
+
+模型性能评价：
+    地毯识别
+    python metrics_test.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_sa_v2/weights/best.pt --val_yaml carpet_detect.yaml --save_name eval_carpet_result_model8_foucs_sa
+
+
+模型导出：pt -> onnx
+    正常模型导出：/home/chenkejing/PycharmProjects/ultralytics/export_onnx_model_static.py (导出静态图)；/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/export_onnx_model_dynamic.py（导出动态图）
+        cd /home/chenkejing/PycharmProjects/ultralytics;
+
+        python export_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/detect/train9/weights/best.pt --sim
+
+        # 导出地毯识别ONNX模型：
+
+            python export_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_exp/yolov8_focus_v12/weights/best.pt --sim
+            python export_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_wire_exp/yolov8_focus_v27/weights/best.pt --sim
+            python export_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_sa_v2/weights/best.pt --sim
+            python export_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_sa_v2/weights/best.pt --input-shape 1 3 640 640 --sim
+
+            # 1月5号
+            python export_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_v3/weights/best.pt --input-shape 1 3 640 640 --sim
+
+        # 导出地毯seg分割模型：
+            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_2/weights/best.pt --input-shape 1 3 640 640 --sim
+
+            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt --input-shape 1 3 640 640 --sim
+
+
+
+        #导出手势识别模型
+            python export_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.pt --input-shape 1 3 640 640 --sim
+
+            python export_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v3/weights/best.pt --input-shape 1 3 416 416 --sim
+
+            2月12日：
+            python export_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --input-shape 1 3 416 416 --sim
+
+            3月13号：
+            python export_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_5/weights/best.pt --input-shape 1 3 416 416 --sim
+
+
+    特别说明：当使用Focus算子时，模型训练时，使用原生Fouce算子训练。模型导出时，则该为自定义Fouce算子
+
+转为rknn：onnx->rknn
+
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/detect/train9/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_foucs.rknn
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/detect/train9/weights/wire_foucs.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_foucs.rknn
+
+    # 导出地毯识别RKNN模型
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_exp/yolov8_focus_v12/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_foucs.rknn
+
+    # uint8量化
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_sa_v2/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_sa_v2.rknn
+
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_sa_v2/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_sa_v2.rknn
+    # 1月5号
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_v3/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_v3.rknn
+
+    # fp32量化
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_exp/yolov8_focus_sa_v2/weights/best.onnx rk3588 fp /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_sa_v2_fp32.rknn
+
+    # 导出地毯分割RKNN模型
+    # 1月9号
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_2/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_seg_v1.rknn
+
+    # 2月10号
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_seg_v7.rknn
+
+
+
+    # 导出手势识别RKNN模型
+
+    #导出手势识别: /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.onnx
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/hand_sa_f_v2_3588.rknn
+
+
+    # uint8量化
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v3/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/hand_f_v3_3588.rknn
+
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v3/weights/best.onnx rk3568 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/hand_f_v3_3568.rknn
+
+    # 2月12号
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/hand_f_v3_3588_0212.rknn
+    # 3月13号
+    python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_5/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/hand_f_v3_3588_0313.rknn
+
+rknn量化精度对比：
+
+    python quantitative_accuracy.py ./rknn_models/carpet_sa_v2_fp32.rknn ./rknn_models/carpet_sa_v2.rknn ./test_image/image_343.jpg
+
+    python quantitative_accuracy.py ./rknn_models/carpet_sa_v2_fp32.rknn ./rknn_models/carpet_sa_v2.rknn ./test_image/image_343.jpg
+
+
+
+
+
+
+

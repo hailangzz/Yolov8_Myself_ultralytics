@@ -1,0 +1,15 @@
+
+# 训练手势识别模型
+tmux new -s yolov8_detect_training
+
+export PYTHONPATH=/home/chenkejing/PycharmProjects/ultralytics:$PYTHONPATH
+python3 Myself_train_model/train_yolov8s_focus_sa_hand.py
+# 分离会话 Ctrl+B D
+tmux attach -t yolov8_hand  # 恢复
+
+
+···································································
+
+tmux ls
+tmux attach -t yolov8_detect_training
+
