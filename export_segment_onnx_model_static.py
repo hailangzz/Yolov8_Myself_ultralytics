@@ -1,13 +1,12 @@
-import Myself_Custom_model_structure.myself_model_struct as rk_head
-
+import argparse
 from io import BytesIO
+
 import onnx
 import torch
+
+import Myself_Custom_model_structure.myself_model_struct as rk_head
 from ultralytics import YOLO
 from ultralytics.nn.modules import head
-import argparse
-from onnx import shape_inference
-
 
 try:
     import onnxsim
@@ -17,9 +16,7 @@ except ImportError:
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-w", "--weights", type=str, required=True, help="PyTorch yolov8 weights"
-    )
+    parser.add_argument("-w", "--weights", type=str, required=True, help="PyTorch yolov8 weights")
     parser.add_argument("--opset", type=int, default=11, help="ONNX opset version")
     parser.add_argument("--sim", action="store_true", help="simplify onnx model")
     parser.add_argument(

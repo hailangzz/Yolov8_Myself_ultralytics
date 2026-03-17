@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import math
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -309,18 +310,18 @@ class ConvTranspose(nn.Module):
 #         # return self.conv(self.contract(x))
 
 
-
-
 import torch.nn.functional as F
+
+
 class Focus(nn.Module):
     # Focus wh information into c-space
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
-        super(Focus, self).__init__()
+        super().__init__()
         self.conv = Conv(c1 * 4, c2, k, s, p, g, act)
 
     def forward(self, x):  # x(b,c,w,h) -> y(b,4c,w/2,h/2)
         if x.shape[1] == 3:
-            weight_np = np.zeros((12, 3, 2, 2), dtype='float32')
+            weight_np = np.zeros((12, 3, 2, 2), dtype="float32")
             weight_np[0:1, 0:1, 0:1, 0:1] = 1
             weight_np[1:2, 1:2, 0:1, 0:1] = 1
             weight_np[2:3, 2:3, 0:1, 0:1] = 1
@@ -337,7 +338,7 @@ class Focus(nn.Module):
             weight_np[10:11, 1:2, 1:2, 1:2] = 1
             weight_np[11:12, 2:3, 1:2, 1:2] = 1
         elif x.shape[1] == 1:
-            weight_np = np.zeros((4, 1, 2, 2), dtype='float32')
+            weight_np = np.zeros((4, 1, 2, 2), dtype="float32")
             weight_np[0:1, 0:1, 0:1, 0:1] = 1
             weight_np[1:2, 0:1, 1:2, 0:1] = 1
             weight_np[2:3, 0:1, 0:1, 1:2] = 1
@@ -345,17 +346,16 @@ class Focus(nn.Module):
         else:
             raise NotImplementedError
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        torch.device("cuda" if torch.cuda.is_available() else "cpu")
         weight_tensor = torch.from_numpy(weight_np)
 
         # y = F.conv2d(x, weight=weight_tensor, bias=None, stride=2, padding=0, dilation=1, groups=1)
         y = F.conv2d(x, weight=weight_tensor, bias=None, stride=2, padding=0, dilation=1, groups=1)
-        #z = self.conv(y)
+        # z = self.conv(y)
         return self.conv(y)
+
+
 #
-
-
-
 
 
 class GhostConv(nn.Module):

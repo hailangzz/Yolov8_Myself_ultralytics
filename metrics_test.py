@@ -1,6 +1,7 @@
-import json
-from ultralytics import YOLO
 import argparse
+import json
+
+from ultralytics import YOLO
 
 
 def metrics_model_performance(model_path, val_yaml, save_name):
@@ -14,15 +15,15 @@ def metrics_model_performance(model_path, val_yaml, save_name):
     print(metrics)
     # 转成 Python dict（metrics 是 ultralytics 对象，需要转换）
     results_dict = {
-        "precision": float(metrics.box.mp),         # P
-        "recall": float(metrics.box.mr),            # R
-        "mAP50": float(metrics.box.map50),          # mAP@50
-        "mAP50_95": float(metrics.box.map),         # mAP@50-95
+        "precision": float(metrics.box.mp),  # P
+        "recall": float(metrics.box.mr),  # R
+        "mAP50": float(metrics.box.map50),  # mAP@50
+        "mAP50_95": float(metrics.box.map),  # mAP@50-95
     }
     print(results_dict)
     # 保存到本地 JSON 文件
     # save_path = "eval_wire_result_model8_foucs_sa.json"
-    save_path = save_name+".json"
+    save_path = save_name + ".json"
     with open(save_path, "w") as f:
         json.dump(results_dict, f, indent=4)
 
@@ -42,4 +43,4 @@ if __name__ == "__main__":
     args = parse_args()
     metrics_model_performance(args.model_path, args.val_yaml, args.save_name)
 
-    #python metrics_test.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_wire_exp/yolov8_focus_sa_v28/weights/best.pt --val_yaml wire_test.yaml --save_name eval_wire_result_model8_foucs_sa
+    # python metrics_test.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_wire_exp/yolov8_focus_sa_v28/weights/best.pt --val_yaml wire_test.yaml --save_name eval_wire_result_model8_foucs_sa
