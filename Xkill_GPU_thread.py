@@ -1,41 +1,32 @@
 #!/usr/bin/env python3
-import subprocess
 import os
 import signal
+import subprocess
+
 
 def get_gpu_processes():
-    """获取 GPU 进程信息：PID, 显存占用, 进程名"""
+    """获取 GPU 进程信息：PID, 显存占用, 进程名."""
     try:
         result = subprocess.check_output(
-            [
-                "nvidia-smi",
-                "--query-compute-apps=pid,process_name,used_memory",
-                "--format=csv,noheader,nounits"
-            ],
-            encoding="utf-8"
+            ["nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader,nounits"],
+            encoding="utf-8",
         )
 
         processes = []
         for line in result.splitlines():
             pid, name, mem = [x.strip() for x in line.split(",")]
-            processes.append({
-                "pid": int(pid),
-                "name": name,
-                "memory": int(mem)
-            })
+            processes.append({"pid": int(pid), "name": name, "memory": int(mem)})
         return processes
 
     except subprocess.CalledProcessError:
         return []
 
+
 def get_resettable_gpus():
-    """
-    返回可 reset 的 GPU 列表（排除主显示 GPU）
-    """
+    """返回可 reset 的 GPU 列表（排除主显示 GPU）."""
     try:
         result = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=index,display_active", "--format=csv,noheader"],
-            encoding="utf-8"
+            ["nvidia-smi", "--query-gpu=index,display_active", "--format=csv,noheader"], encoding="utf-8"
         )
 
         resettable = []
@@ -51,6 +42,7 @@ def get_resettable_gpus():
     except subprocess.CalledProcessError:
         return []
 
+
 def kill_process(pid):
     try:
         os.kill(pid, signal.SIGKILL)
@@ -60,10 +52,9 @@ def kill_process(pid):
     except PermissionError:
         print(f"⛔ No permission to kill PID {pid}")
 
+
 def gpu_reset():
-    """
-    仅 reset 非显示 GPU，避免主 GPU 报错
-    """
+    """仅 reset 非显示 GPU，避免主 GPU 报错."""
     print("\n🧹 Attempting GPU reset (fragment cleanup)...")
 
     gpus = get_resettable_gpus()
@@ -79,24 +70,15 @@ def gpu_reset():
         except subprocess.CalledProcessError:
             print(f"⚠ GPU {gpu_id} reset failed")
 
-import subprocess
-import os
 
 def run_sudo_command(cmd):
-    """
-    在非交互环境下执行 sudo 命令
-    """
+    """在非交互环境下执行 sudo 命令."""
     # password = os.environ.get("SUDO_PASS")
     password = "123456"
     if not password:
         raise RuntimeError("❌ SUDO_PASS environment variable not set")
 
-    process = subprocess.run(
-        ["sudo", "-S"] + cmd,
-        input=password + "\n",
-        text=True,
-        capture_output=True
-    )
+    process = subprocess.run(["sudo", "-S", *cmd], input=password + "\n", text=True, capture_output=True)
 
     if process.returncode != 0:
         print(f"⚠ Command failed: {' '.join(cmd)}")
@@ -104,14 +86,17 @@ def run_sudo_command(cmd):
     else:
         print(f"✔ Success: {' '.join(cmd)}")
 
+
 def reload_nvidia_uvm():
     print("🔧 Reloading NVIDIA UVM module...")
     run_sudo_command(["rmmod", "nvidia_uvm"])
     run_sudo_command(["modprobe", "nvidia_uvm"])
 
 
-import torch
 import gc
+
+import torch
+
 
 def clean_gpu():
     print("🧹 Cleaning GPU memory...")
@@ -126,6 +111,7 @@ def clean_gpu():
     torch.cuda.ipc_collect()
 
     print("✅ GPU memory cleaned")
+
 
 def main():
     print("🔍 Checking GPU processes...\n")
@@ -157,6 +143,3 @@ if __name__ == "__main__":
     main()
     reload_nvidia_uvm()
     clean_gpu()
-
-
-
