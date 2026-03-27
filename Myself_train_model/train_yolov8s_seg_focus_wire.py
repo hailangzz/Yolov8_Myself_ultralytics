@@ -21,17 +21,17 @@ from ultralytics import YOLO
 yolo segment train \
     model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire.yaml \
     data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
-    pretrained=/workspace/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_/weights/last.pt \
+    pretrained=/workspace/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_2/weights/last.pt \
     epochs=300 \
     imgsz=640 \
-    batch=80 \
+    batch=32 \
     workers=4 \
     amp=True \
+    multi_scale=True \
     project=runs/my_wire_seg_exp \
     name=yolov8s_wire_seg_v1_ \
     augment=True \
     weight_decay=0.0005 \
-    dropout=0.1 \
     device=0
     
 yolo segment train \
@@ -39,17 +39,31 @@ yolo segment train \
     data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
     epochs=300 \
     imgsz=640 \
-    batch=80 \
+    batch=32 \
     workers=4 \
     amp=True \
     project=runs/my_wire_seg_exp \
     name=yolov8s_wire_seg_v1_ \
     resume=True \
     augment=True \
+    multi_scale=True \
     weight_decay=0.0005 \
-    dropout=0.1 \
     device=0
     
+yolo segment train \
+    model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire.yaml \
+    data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
+    epochs=300 \
+    imgsz=640 \
+    batch=32 \
+    workers=4 \
+    amp=True \
+    project=runs/my_wire_seg_exp \
+    name=yolov8s_wire_seg_v1_ \
+    augment=True \
+    multi_scale=True \
+    weight_decay=0.0005 \
+    device=0
     
     说明：
     amp=True 的作用：自动混合精度训练。带来的好处：显存减少 30~50%训练速度提升 20~60%可以用更大的 batch  
@@ -57,8 +71,6 @@ yolo segment train \
     augment=True :启动数据增强
     resume=True：自定加载，项目目录下的模型。与pretrained（手动指定预训练模型）一般不同时使用
 """
-
-
 
 from ultralytics import YOLO
 

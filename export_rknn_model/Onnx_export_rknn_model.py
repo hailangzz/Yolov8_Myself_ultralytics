@@ -2,8 +2,8 @@ import sys
 from rknn.api import RKNN
 
 # DATASET_PATH = '/home/chenkejing/PycharmProjects/EMdoorTotalDetect/rk3588-convert-to-rknn/wire_quant_data/wire_quant.txt'
-# DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image/carpet_quant.txt'
-DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/hand_real_image/hand_quant.txt'
+DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image/carpet_quant.txt'
+# DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/hand_real_image/hand_quant.txt'
 
 DEFAULT_RKNN_PATH = '../model/yolov8.rknn'
 DEFAULT_QUANT = True

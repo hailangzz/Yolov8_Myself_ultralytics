@@ -30,9 +30,12 @@ def run_inference(model_path, imgs_dir, save_dir):
 
         # 推理
         results = model(img_path, conf=0.55)[0]
+        # results = model(img_path, conf=0.35)[0]
+        # results = model(img_path, conf=0.0005)[0]
 
         # 读取原图
         img = cv2.imread(img_path)
+        # img = cv2.resize(img, (640, 640))
 
         # 绘制检测框
         for box in results.boxes:
@@ -84,6 +87,13 @@ if __name__ == "__main__":
     #3月11日
     # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.pt --imgs_dir /home/chenkejing/Desktop/rgb_images --save_dir ./results/hand_focus_sa_v2_rgb
 
+    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_5/weights/best.pt --imgs_dir /home/chenkejing/Desktop/hand_detect --save_dir ./results/hand_yolov8_focus_sa_v3_5
+
+
     # 测试地毯检测真实样本
     # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image --save_dir ./results/carpet
     # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_3/weights/best.pt --imgs_dir /home/chenkejing/Desktop/capture_images --save_dir ./results/hand_model_focus_sa_v3
+
+    #液体检测
+    #3月18日
+    # python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8s_Liquad_det_v1_5/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_image_test --save_dir ./results/liquad_model_focus_v3
