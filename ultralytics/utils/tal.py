@@ -85,23 +85,28 @@ class TaskAlignedAssigner(nn.Module):
             return tuple(t.to(device) for t in result)
 
     def _forward(self, pd_scores, pd_bboxes, anc_points, gt_labels, gt_bboxes, mask_gt):
-        """Compute the task-aligned assignment.
+        """Compute the task-aligned assignment with ignore mechanism.
 
         Args:
-            pd_scores (torch.Tensor): Predicted classification scores with shape (bs, num_total_anchors, num_classes).
-            pd_bboxes (torch.Tensor): Predicted bounding boxes with shape (bs, num_total_anchors, 4).
-            anc_points (torch.Tensor): Anchor points with shape (num_total_anchors, 2).
-            gt_labels (torch.Tensor): Ground truth labels with shape (bs, n_max_boxes, 1).
-            gt_bboxes (torch.Tensor): Ground truth boxes with shape (bs, n_max_boxes, 4).
-            mask_gt (torch.Tensor): Mask for valid ground truth boxes with shape (bs, n_max_boxes, 1).
+            pd_scores (torch.Tensor): Predicted classification scores (bs, num_total_anchors, num_classes)
+            pd_bboxes (torch.Tensor): Predicted bounding boxes (bs, num_total_anchors, 4)
+            anc_points (torch.Tensor): Anchor points (num_total_anchors, 2)
+            gt_labels (torch.Tensor): Ground truth labels (bs, n_max_boxes, 1)
+            gt_bboxes (torch.Tensor): Ground truth boxes (bs, n_max_boxes, 4)
+            mask_gt (torch.Tensor): Mask for valid ground truth boxes (bs, n_max_boxes, 1)
 
         Returns:
-            target_labels (torch.Tensor): Target labels with shape (bs, num_total_anchors).
-            target_bboxes (torch.Tensor): Target bounding boxes with shape (bs, num_total_anchors, 4).
-            target_scores (torch.Tensor): Target scores with shape (bs, num_total_anchors, num_classes).
-            fg_mask (torch.Tensor): Foreground mask with shape (bs, num_total_anchors).
-            target_gt_idx (torch.Tensor): Target ground truth indices with shape (bs, num_total_anchors).
+            target_labels, target_bboxes, target_scores, fg_mask, target_gt_idx
         """
+        # --------------------------
+        # 1️⃣ 处理 ignore gt
+        # 假设 ignore gt 的标签 < 0，例如 -1
+        ignore_mask = (gt_labels < 0)  # shape: (bs, n_max_boxes, 1)
+        mask_gt = mask_gt.clone()
+        mask_gt[ignore_mask] = 0
+        # --------------------------
+
+        # 原有匹配逻辑
         mask_pos, align_metric, overlaps = self.get_pos_mask(
             pd_scores, pd_bboxes, gt_labels, gt_bboxes, anc_points, mask_gt
         )
@@ -111,7 +116,7 @@ class TaskAlignedAssigner(nn.Module):
         # Assigned target
         target_labels, target_bboxes, target_scores = self.get_targets(gt_labels, gt_bboxes, target_gt_idx, fg_mask)
 
-        # Normalize
+        # Normalize alignment metric
         align_metric *= mask_pos
         pos_align_metrics = align_metric.amax(dim=-1, keepdim=True)  # b, max_num_obj
         pos_overlaps = (overlaps * mask_pos).amax(dim=-1, keepdim=True)  # b, max_num_obj

@@ -62,6 +62,7 @@ class DetectionTrainer(BaseTrainer):
         """
         super().__init__(cfg, overrides, _callbacks)
 
+
     def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
         """Build YOLO Dataset for training or validation.
 
