@@ -17,24 +17,19 @@
   - [7.3 Run demo](#73-run-demo)
 - [8. Expected Results](#8-expected-results)
 
-
-
 ## 1. Description
 
-The model used in this example comes from the following open source projects:  
+The model used in this example comes from the following open source projects:
 
 https://github.com/airockchip/ultralytics_yolov8
-
-
 
 ## 2. Current Support Platform
 
 RK3562, RK3566, RK3568, RK3576, RK3588, RV1126B, RV1109, RV1126, RK1808, RK3399PRO
 
-
 ## 3. Pretrained Model
 
-Download link: 
+Download link:
 
 [./yolov8n.onnx](https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolov8/yolov8n.onnx)<br />[./yolov8s.onnx](https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolov8/yolov8s.onnx)<br />[./yolov8m.onnx](https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolov8/yolov8m.onnx)
 
@@ -46,6 +41,7 @@ cd model
 ```
 
 **Note**: The model provided here is an optimized model, which is different from the official original model. Take yolov8n.onnx as an example to show the difference between them.
+
 1. The comparison of their output information is as follows. The left is the official original model, and the right is the optimized model. As shown in the figure, the original one output is divided into three groups. For example, in the set of outputs ([1,64,80,80],[1,80,80,80],[1,1,80,80]), [1,64,80,80] is the coordinate of the box, [1,80,80,80] is the confidence of the box corresponding to the 80 categories, and [1,1,80,80] is the sum of the confidence of the 80 categories.
 
 <div align=center>
@@ -58,49 +54,44 @@ cd model
   <img src="./model_comparison/yolov8_graph_comparison.jpg" alt="Image">
 </div>
 
-
 ## 4. Convert to RKNN
 
-*Usage:*
+_Usage:_
 
 ```shell
 cd python
 python convert.py <onnx_model> <TARGET_PLATFORM> <dtype(optional)> <output_rknn_path(optional)>
 
-# such as: 
+# such as:
 python convert.py ../model/yolov8n.onnx rk3588
 # output model will be saved as ../model/yolov8.rknn
 ```
 
-*Description:*
+_Description:_
 
 - `<onnx_model>`: Specify ONNX model path.
 - `<TARGET_PLATFORM>`: Specify NPU platform name. Such as 'rk3588'.
 - `<dtype>(optional)`: Specify as `i8`, `u8` or `fp`. `i8`/`u8` for doing quantization, `fp` for no quantization. Default is `i8`.
 - `<output_rknn_path>(optional)`: Specify save path for the RKNN model, default save in the same directory as ONNX model with name `yolov8.rknn`
 
-
-
 ## 5. Python Demo
 
-*Usage:*
+_Usage:_
 
 ```shell
 cd python
 # Inference with PyTorch model or ONNX model
-python yolov8.py --model_path <pt_model/onnx_model> --img_show
+python yolov8.py --model_path < pt_model/onnx_model > --img_show
 
 # Inference with RKNN model
-python yolov8.py --model_path <rknn_model> --target <TARGET_PLATFORM> --img_show
+python yolov8.py --model_path < rknn_model > --target < TARGET_PLATFORM > --img_show
 ```
 
-*Description:*
+_Description:_
 
 - `<TARGET_PLATFORM>`: Specify NPU platform name. Such as 'rk3588'.
 
 - `<pt_model / onnx_model / rknn_model>`: Specify the model path.
-
-
 
 ## 6. Android Demo
 
@@ -118,7 +109,7 @@ With device connected via USB port, push demo files to devices:
 ```shell
 adb root
 adb remount
-adb push install/<TARGET_PLATFORM>_android_<ARCH>/rknn_yolov8_demo/ /data/
+adb push install/ /data/ < TARGET_PLATFORM > _android_ < ARCH > /rknn_yolov8_demo/
 ```
 
 #### 6.3 Run demo
@@ -131,15 +122,13 @@ export LD_LIBRARY_PATH=./lib
 ./rknn_yolov8_demo model/yolov8.rknn model/bus.jpg
 ```
 
-- After running, the result was saved as `out.png`. To check the result on host PC, pull back result referring to the following command: 
+- After running, the result was saved as `out.png`. To check the result on host PC, pull back result referring to the following command:
 
   ```sh
   adb pull /data/rknn_yolov8_demo/out.png
   ```
 
 - Output result refer [Expected Results](#8-expected-results).
-
-
 
 ## 7. Linux Demo
 
@@ -153,7 +142,7 @@ Please refer to the [Compilation_Environment_Setup_Guide](../../docs/Compilation
 - If device connected via USB port, push demo files to devices:
 
 ```shell
-adb push install/<TARGET_PLATFORM>_linux_<ARCH>/rknn_yolov8_demo/ /userdata/
+adb push install/ /userdata/ < TARGET_PLATFORM > _linux_ < ARCH > /rknn_yolov8_demo/
 ```
 
 - For other boards, use `scp` or other approaches to push all files under `install/<TARGET_PLATFORM>_linux_<ARCH>/rknn_yolov8_demo/` to `userdata`.
@@ -168,15 +157,13 @@ export LD_LIBRARY_PATH=./lib
 ./rknn_yolov8_demo model/yolov8.rknn model/bus.jpg
 ```
 
-- After running, the result was saved as `out.png`. To check the result on host PC, pull back result referring to the following command: 
+- After running, the result was saved as `out.png`. To check the result on host PC, pull back result referring to the following command:
 
   ```
   adb pull /userdata/rknn_yolov8_demo/out.png
   ```
 
 - Output result refer [Expected Results](#8-expected-results).
-
-
 
 ## 8. Expected Results
 
