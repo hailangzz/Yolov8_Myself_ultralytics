@@ -1,15 +1,15 @@
 ## #https://github.com/hailangzz/rk3588-convert-to-rknn/tree/master
 import math
+
 import torch
+
 from ultralytics.utils.tal import make_anchors
-import math
+
 
 def detect_forward(self, x):
     shape = x[0].shape
     if self.dynamic or self.shape != shape:
-        self.anchors, self.strides = (
-            a.transpose(0, 1) for a in make_anchors(x, self.stride, 0.5)
-        )
+        self.anchors, self.strides = (a.transpose(0, 1) for a in make_anchors(x, self.stride, 0.5))
         self.shape = shape
     y = []
     for i in range(self.nl):
@@ -20,12 +20,11 @@ def detect_forward(self, x):
         y.append(cls_sum)
     return y
 
+
 def pose_detect_forward(self, x):
     shape = x[0].shape
     if self.dynamic or self.shape != shape:
-        self.anchors, self.strides = (
-            a.transpose(0, 1) for a in make_anchors(x, self.stride, 0.5)
-        )
+        self.anchors, self.strides = (a.transpose(0, 1) for a in make_anchors(x, self.stride, 0.5))
         self.shape = shape
     y = []
     for i in range(self.nl):
@@ -33,6 +32,7 @@ def pose_detect_forward(self, x):
         cls = torch.sigmoid(self.cv3[i](x[i]))
         y.append(cls)
     return y
+
 
 def v10_detect_forward(self, x):
     y = []
@@ -47,7 +47,7 @@ def v10_detect_forward(self, x):
 
 def segment_forward(self, x):
     p = self.proto(x[0])  # mask protos
-    bs = p.shape[0]  # batch size
+    p.shape[0]  # batch size
     mc = [self.cv4[i](x[i]) for i in range(self.nl)]
     # x = self.detect(self, x)
     x = detect_forward(self, x)
@@ -85,9 +85,7 @@ def pose_kpt_decode(self, bs, kpts):
         y = kpt.view(bs, *self.kpt_shape, -1)
         start_idx = anch_len[i]
         end_idx = anch_len[i + 1]
-        a = (
-            y[:, :, :2] * 2.0 + (self.anchors[:, start_idx:end_idx] - 0.5)
-        ) * self.strides[:, start_idx:end_idx]
+        a = (y[:, :, :2] * 2.0 + (self.anchors[:, start_idx:end_idx] - 0.5)) * self.strides[:, start_idx:end_idx]
         pred_kpts.append(a.view(bs, 34, -1))
         if ndim == 3:
             b = y[:, :, 2:3].sigmoid()
@@ -100,7 +98,7 @@ def pose_kpt_decode(self, bs, kpts):
 
 def obb_forward(self, x):
     """Concatenates and returns predicted bounding boxes and class probabilities."""
-    bs = x[0].shape[0]  # batch size
+    x[0].shape[0]  # batch size
     # angle = torch.cat([self.cv4[i](x[i]).view(bs, self.ne, -1) for i in range(self.nl)], 2)  # OBB theta logits
     angle = [self.cv4[i](x[i]) for i in range(self.nl)]
     # NOTE: set `angle` as an attribute so that `decode_bboxes` could use it.
