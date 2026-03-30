@@ -1,0 +1,57 @@
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
+# Ultralytics YOLOv8-seg instance segmentation model with P3/8 - P5/32 outputs
+# Model docs: https://docs.ultralytics.com/models/yolov8
+# Task docs: https://docs.ultralytics.com/tasks/segment
+
+# Parameters
+model: s
+nc: 1
+scales:
+  n: [0.33, 0.25, 1024]
+  s: [0.33, 0.50, 1024]
+  m: [0.67, 0.75, 768]
+  l: [1.00, 1.00, 512]
+  x: [1.00, 1.25, 512]
+
+# Backbone
+backbone:
+  - [-1, 1, Focus, [64, 3, 2]]    # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2]]   # 1-P2/4
+  - [-1, 3, C2f, [128, True]]    # 2
+  - [-1, 1, Conv, [256, 3, 2]]   # 3-P3/8
+  - [-1, 6, C2f, [256, True]]    # 4
+  - [-1, 1, Conv, [512, 3, 2]]   # 5-P4/16
+  - [-1, 6, C2f, [512, True]]    # 6
+  - [-1, 1, Conv, [1024, 3, 2]]  # 7-P5/32
+  - [-1, 3, C2f_SA, [1024, True]] # 8
+  - [-1, 1, SPPF, [1024, 5]]     # 9
+
+# Head
+head:
+  # Top-down path
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]   # 10: P5 up -> P4
+  - [[-1, 6], 1, Concat, [1]]                    # 11: concat P5_up + P4 backbone
+  - [-1, 3, C2f, [512]]                          # 12: fused P4
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]   # 13: P4 up -> P3
+  - [[-1, 4], 1, Concat, [1]]                    # 14: concat P4_up + P3 backbone
+  - [-1, 3, C2f, [256]]                          # 15: fused P3 (small target)
+
+  - [ -1, 1, nn.Upsample, [ None, 2, "nearest" ]]   # 16: P4 up -> P3
+  - [ [ -1, 2 ], 1, Concat, [ 1 ] ]                    # 17: concat P4_up + P3 backbone
+  - [ -1, 3, C2f, [ 128 ] ]                          # 18: fused P3 (small target)
+
+  # Bottom-up path
+  - [-1, 1, Conv, [128, 3, 2]]                   # 19: P3_down -> P4
+  - [[-1, 15], 1, Concat, [1]]                   # 20: concat P3_down + P4 fused
+  - [-1, 3, C2f, [256]]                          # 21: fused P4 (medium)
+
+  - [-1, 1, Conv, [512, 3, 2]]                   # 22: P4_down -> P5
+  - [[-1, 12], 1, Concat, [1]]                    # 23: concat P4_down + P5 backbone
+  - [-1, 3, C2f, [512]]                         # 24: fused P5 (large)
+
+  # Segment head
+  - [[18, 21, 24], 1, Segment, [nc, 32, 256]]   # 22: Segment (small/medium/large)
+
+

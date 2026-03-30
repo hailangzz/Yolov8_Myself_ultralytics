@@ -269,89 +269,89 @@ class ConvTranspose(nn.Module):
         return self.act(self.conv_transpose(x))
 
 
-# class Focus(nn.Module):
-#     """Focus module for concentrating feature information.
-#
-#     Slices input tensor into 4 parts and concatenates them in the channel dimension.
-#
-#     Attributes:
-#         conv (Conv): Convolution layer.
-#     """
-#
-#     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):
-#         """Initialize Focus module with given parameters.
-#
-#         Args:
-#             c1 (int): Number of input channels.
-#             c2 (int): Number of output channels.
-#             k (int): Kernel size.
-#             s (int): Stride.
-#             p (int, optional): Padding.
-#             g (int): Groups.
-#             act (bool | nn.Module): Activation function.
-#         """
-#         super().__init__()
-#         self.conv = Conv(c1 * 4, c2, k, s, p, g, act=act)
-#         # self.contract = Contract(gain=2)
-#
-#     def forward(self, x):
-#         """Apply Focus operation and convolution to input tensor.
-#
-#         Input shape is (B, C, W, H) and output shape is (B, 4C, W/2, H/2).
-#
-#         Args:
-#             x (torch.Tensor): Input tensor.
-#
-#         Returns:
-#             (torch.Tensor): Output tensor.
-#         """
-#         return self.conv(torch.cat((x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]), 1))
-#         # return self.conv(self.contract(x))
-
-
-
-
-import torch.nn.functional as F
 class Focus(nn.Module):
-    # Focus wh information into c-space
-    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
-        super(Focus, self).__init__()
-        self.conv = Conv(c1 * 4, c2, k, s, p, g, act)
+    """Focus module for concentrating feature information.
 
-    def forward(self, x):  # x(b,c,w,h) -> y(b,4c,w/2,h/2)
-        if x.shape[1] == 3:
-            weight_np = np.zeros((12, 3, 2, 2), dtype='float32')
-            weight_np[0:1, 0:1, 0:1, 0:1] = 1
-            weight_np[1:2, 1:2, 0:1, 0:1] = 1
-            weight_np[2:3, 2:3, 0:1, 0:1] = 1
+    Slices input tensor into 4 parts and concatenates them in the channel dimension.
 
-            weight_np[3:4, 0:1, 1:2, 0:1] = 1
-            weight_np[4:5, 1:2, 1:2, 0:1] = 1
-            weight_np[5:6, 2:3, 1:2, 0:1] = 1
+    Attributes:
+        conv (Conv): Convolution layer.
+    """
 
-            weight_np[6:7, 0:1, 0:1, 1:2] = 1
-            weight_np[7:8, 1:2, 0:1, 1:2] = 1
-            weight_np[8:9, 2:3, 0:1, 1:2] = 1
+    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):
+        """Initialize Focus module with given parameters.
 
-            weight_np[9:10, 0:1, 1:2, 1:2] = 1
-            weight_np[10:11, 1:2, 1:2, 1:2] = 1
-            weight_np[11:12, 2:3, 1:2, 1:2] = 1
-        elif x.shape[1] == 1:
-            weight_np = np.zeros((4, 1, 2, 2), dtype='float32')
-            weight_np[0:1, 0:1, 0:1, 0:1] = 1
-            weight_np[1:2, 0:1, 1:2, 0:1] = 1
-            weight_np[2:3, 0:1, 0:1, 1:2] = 1
-            weight_np[3:4, 0:1, 1:2, 1:2] = 1
-        else:
-            raise NotImplementedError
+        Args:
+            c1 (int): Number of input channels.
+            c2 (int): Number of output channels.
+            k (int): Kernel size.
+            s (int): Stride.
+            p (int, optional): Padding.
+            g (int): Groups.
+            act (bool | nn.Module): Activation function.
+        """
+        super().__init__()
+        self.conv = Conv(c1 * 4, c2, k, s, p, g, act=act)
+        # self.contract = Contract(gain=2)
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        weight_tensor = torch.from_numpy(weight_np)
+    def forward(self, x):
+        """Apply Focus operation and convolution to input tensor.
 
-        # y = F.conv2d(x, weight=weight_tensor, bias=None, stride=2, padding=0, dilation=1, groups=1)
-        y = F.conv2d(x, weight=weight_tensor, bias=None, stride=2, padding=0, dilation=1, groups=1)
-        #z = self.conv(y)
-        return self.conv(y)
+        Input shape is (B, C, W, H) and output shape is (B, 4C, W/2, H/2).
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            (torch.Tensor): Output tensor.
+        """
+        return self.conv(torch.cat((x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]), 1))
+        # return self.conv(self.contract(x))
+
+
+
+
+# import torch.nn.functional as F
+# class Focus(nn.Module):
+#     # Focus wh information into c-space
+#     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
+#         super(Focus, self).__init__()
+#         self.conv = Conv(c1 * 4, c2, k, s, p, g, act)
+#
+#     def forward(self, x):  # x(b,c,w,h) -> y(b,4c,w/2,h/2)
+#         if x.shape[1] == 3:
+#             weight_np = np.zeros((12, 3, 2, 2), dtype='float32')
+#             weight_np[0:1, 0:1, 0:1, 0:1] = 1
+#             weight_np[1:2, 1:2, 0:1, 0:1] = 1
+#             weight_np[2:3, 2:3, 0:1, 0:1] = 1
+#
+#             weight_np[3:4, 0:1, 1:2, 0:1] = 1
+#             weight_np[4:5, 1:2, 1:2, 0:1] = 1
+#             weight_np[5:6, 2:3, 1:2, 0:1] = 1
+#
+#             weight_np[6:7, 0:1, 0:1, 1:2] = 1
+#             weight_np[7:8, 1:2, 0:1, 1:2] = 1
+#             weight_np[8:9, 2:3, 0:1, 1:2] = 1
+#
+#             weight_np[9:10, 0:1, 1:2, 1:2] = 1
+#             weight_np[10:11, 1:2, 1:2, 1:2] = 1
+#             weight_np[11:12, 2:3, 1:2, 1:2] = 1
+#         elif x.shape[1] == 1:
+#             weight_np = np.zeros((4, 1, 2, 2), dtype='float32')
+#             weight_np[0:1, 0:1, 0:1, 0:1] = 1
+#             weight_np[1:2, 0:1, 1:2, 0:1] = 1
+#             weight_np[2:3, 0:1, 0:1, 1:2] = 1
+#             weight_np[3:4, 0:1, 1:2, 1:2] = 1
+#         else:
+#             raise NotImplementedError
+#
+#         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#         weight_tensor = torch.from_numpy(weight_np)
+#
+#         # y = F.conv2d(x, weight=weight_tensor, bias=None, stride=2, padding=0, dilation=1, groups=1)
+#         y = F.conv2d(x, weight=weight_tensor, bias=None, stride=2, padding=0, dilation=1, groups=1)
+#         #z = self.conv(y)
+#         return self.conv(y)
 #
 
 
