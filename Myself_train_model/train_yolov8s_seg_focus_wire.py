@@ -78,7 +78,7 @@ yolo segment train \
     model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire_0330.yaml \
     data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
     epochs=300 \
-    imgsz=1280 \
+    imgsz=640 \
     batch=32 \
     workers=4 \
     amp=True \
@@ -89,7 +89,20 @@ yolo segment train \
     device=0 \
     box=2.0
        
-
+yolo segment val \
+    model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire_0330.yaml \
+    data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
+    epochs=300 \
+    imgsz=640 \
+    batch=32 \
+    workers=4 \
+    amp=True \
+    project=runs/my_wire_seg_exp \
+    name=yolov8s_wire_seg_v1_rect_boxgain \
+    augment=True \
+    weight_decay=0.0005 \
+    device=0 \
+    box=2.0
 
     说明：
     rect=True
@@ -134,3 +147,5 @@ if __name__ == "__main__":
     )
 
     # watch -n 1 nvidia-smi #监控GPU占用信息
+
+
