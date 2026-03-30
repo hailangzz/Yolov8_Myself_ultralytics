@@ -1,69 +1,78 @@
 import torch
 from torch.utils.data import Dataset
 import cv2
-import os
+import numpy as np
 
 class CrossDatasetYOLO(Dataset):
     """
-    跨数据集 YOLOv8 数据集
-    每个样本返回:
-        image: tensor [C,H,W]
-        gt_bboxes: tensor [n_max_boxes,4] xyxy
-        gt_labels: tensor [n_max_boxes] (-1表示ignore)
-        mask_gt: tensor [n_max_boxes,1] (有效gt标记)
+    跨数据集YOLO数据集，每张图片可以指定需要忽略的类别。
+    自动返回 ignore_class_ids，方便训练时忽略未标注类别。
     """
-    def __init__(self, dataset_list, img_size=640, ignore_class_ids=None):
+    def __init__(self, dataset_list, img_size=640):
         """
-        Args:
-            dataset_list: list of dict，每个dict包含 'img_path', 'bboxes', 'labels'
-            img_size: 图片resize大小
-            ignore_class_ids: list[int] 忽略类别id
+        dataset_list: list of dict, 每个 dict 包含:
+            - img_path: str
+            - bboxes: list of [x1, y1, x2, y2]
+            - labels: list of int
+            - ignore_class_ids: list of int, 可选
+        img_size: 输入模型的尺寸
         """
         self.dataset_list = dataset_list
         self.img_size = img_size
-        self.ignore_class_ids = ignore_class_ids if ignore_class_ids else []
-
-        # 计算 n_max_boxes
-        self.n_max_boxes = max([len(d['labels']) for d in dataset_list])
 
     def __len__(self):
         return len(self.dataset_list)
 
     def __getitem__(self, idx):
         data = self.dataset_list[idx]
-        img_path = data['img_path']
-        bboxes = data['bboxes']  # list of [x_min,y_min,x_max,y_max]
-        labels = data['labels']  # list of int
-
-        # 读取图片
-        img = cv2.imread(img_path)
+        img = cv2.imread(data['img_path'])
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(img, (self.img_size, self.img_size))
-        img = torch.from_numpy(img).permute(2,0,1).float() / 255.0  # [C,H,W]
 
-        # pad gt_bboxes 和 gt_labels
-        gt_bboxes = torch.zeros((self.n_max_boxes,4), dtype=torch.float32)
-        gt_labels = torch.full((self.n_max_boxes,), -1, dtype=torch.int64)  # 默认-1 ignore
-        mask_gt = torch.zeros((self.n_max_boxes,1), dtype=torch.float32)
+        # Resize + letterbox
+        h, w = img.shape[:2]
+        scale = self.img_size / max(h, w)
+        nh, nw = int(h*scale), int(w*scale)
+        img_resized = cv2.resize(img, (nw, nh))
+        canvas = np.zeros((self.img_size, self.img_size, 3), dtype=np.uint8)
+        canvas[:nh, :nw, :] = img_resized
+        img_tensor = torch.from_numpy(canvas).permute(2,0,1).float()  # C,H,W
 
-        n = len(labels)
-        if n>0:
-            gt_bboxes[:n] = torch.tensor(bboxes, dtype=torch.float32)
-            gt_labels[:n] = torch.tensor(labels, dtype=torch.int64)
-            mask_gt[:n] = 1.0
+        # bboxes -> tensor, xyxy
+        bboxes = torch.tensor(data['bboxes'], dtype=torch.float32)
+        labels = torch.tensor(data['labels'], dtype=torch.long)
 
-            # 处理 ignore_class_ids
-            for i, lbl in enumerate(labels):
-                if lbl in self.ignore_class_ids:
-                    gt_labels[i] = -1  # 标记ignore
+        # ignore_class_ids
+        ignore_class_ids = data.get('ignore_class_ids', [])
 
-        return img, gt_bboxes, gt_labels, mask_gt
+        # mask_gt 用于占位，可在后续Loss中使用
+        mask_gt = torch.ones_like(labels, dtype=torch.bool)
+
+        return img_tensor, bboxes, labels, mask_gt, ignore_class_ids
+
 
 def collate_fn(batch):
-    """Dataloader collate_fn"""
-    imgs, gt_bboxes, gt_labels, mask_gt = zip(*batch)
+    """
+    批处理
+    """
+    imgs, bboxes, labels, masks, ignore_ids = zip(*batch)
+
+    # pad bboxes/labels到最大数量
+    max_num = max(b.shape[0] for b in bboxes)
+    padded_bboxes, padded_labels, padded_masks = [], [], []
+
+    for b, l, m in zip(bboxes, labels, masks):
+        pad_num = max_num - b.shape[0]
+        if pad_num > 0:
+            b = torch.cat([b, torch.zeros((pad_num,4), dtype=torch.float32)], dim=0)
+            l = torch.cat([l, -torch.ones(pad_num, dtype=torch.long)], dim=0)
+            m = torch.cat([m, torch.zeros(pad_num, dtype=torch.bool)], dim=0)
+        padded_bboxes.append(b)
+        padded_labels.append(l)
+        padded_masks.append(m)
+
     imgs = torch.stack(imgs)
-    gt_bboxes = torch.stack(gt_bboxes)
-    gt_labels = torch.stack(gt_labels)
-    mask_gt = torch.stack(mask_gt)
-    return imgs, gt_bboxes, gt_labels, mask_gt
+    bboxes = torch.stack(padded_bboxes)
+    labels = torch.stack(padded_labels)
+    masks = torch.stack(padded_masks)
+
+    return imgs, bboxes, labels, masks, ignore_ids

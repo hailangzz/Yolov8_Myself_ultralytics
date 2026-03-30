@@ -86,7 +86,7 @@ for epoch in range(epochs):
             "cls": torch.tensor(cls, device=device, dtype=torch.long),
             "bboxes": torch.stack(bboxes).to(device),
         }
-
+        print(batch)
         # ------------------------
         # 前向
         # ------------------------

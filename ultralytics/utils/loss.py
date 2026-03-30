@@ -236,8 +236,12 @@ class v8DetectionLoss:
         return dist2bbox(pred_dist, anchor_points, xywh=False)
 
     def __call__(self, preds, batch):
+        # print(preds)
         loss = torch.zeros(3, device=self.device)  # box, cls, dfl
         feats = preds[1] if isinstance(preds, tuple) else preds
+
+        # for xi in feats:
+        #     print(xi)
 
         pred_distri, pred_scores = torch.cat(
             [xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2
@@ -257,6 +261,7 @@ class v8DetectionLoss:
         targets = torch.cat(
             (batch["batch_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]), 1
         )
+        # print(targets)
         targets = self.preprocess(targets, batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
         gt_labels, gt_bboxes = targets.split((1, 4), 2)
 
@@ -264,7 +269,8 @@ class v8DetectionLoss:
         valid_mask = (gt_labels >= 0).float()
         mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0).float()
         mask_gt = mask_gt * valid_mask
-
+        # print(valid_mask)
+        # print(mask_gt)
         # ------------------------
         # Pboxes
         # ------------------------
@@ -317,6 +323,9 @@ class v8DetectionLoss:
         loss[0] *= self.hyp.box
         loss[1] *= self.hyp.cls
         loss[2] *= self.hyp.dfl
+
+        print("loss.requires_grad:", loss.requires_grad)
+        print("loss.grad_fn:", loss.grad_fn)
 
         return loss * batch_size, loss.detach()
 
