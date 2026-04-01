@@ -47,7 +47,8 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
             img_path,
             conf=conf_thres,
             task='segment',
-            imgsz=640  # 👈 强制输入 640x640
+            # imgsz=640  # 👈 强制输入 640x640
+            imgsz=1280  # 👈 强制输入 640x640
         )[0]
 
         # 读取原图
@@ -180,3 +181,6 @@ if __name__ == "__main__":
 
     # 0327线材检测
     # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_5/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+
+    # 0331线材检测
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_rect_boxgain4/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
