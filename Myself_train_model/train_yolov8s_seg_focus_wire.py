@@ -85,6 +85,7 @@ yolo segment train \
     project=runs/my_wire_seg_exp \
     name=yolov8s_wire_seg_v1_rect_boxgain \
     augment=True \
+    mosaic=0 \
     weight_decay=0.0005 \
     device=0 \
     box=2.0
@@ -95,6 +96,7 @@ yolo segment train \
     启用长宽比训练，避免原图 1902×1080 被强制缩放到 640×640 导致横向压缩。
     保持线材的形状比例，提高小目标检测能力。
     box=2.0
+    mosaic=0 ：防止mosic图像增强时，破坏线材的特征连续性，且mosic后，线材过细，会直接被下采样消失掉。
     对 YOLOv8 来说，这个参数可以放大 box regression loss 的权重，对小目标更敏感。
     默认是 0.05~0.1 左右，你可以先试 2.0 或 1.5，看训练效果。
         
