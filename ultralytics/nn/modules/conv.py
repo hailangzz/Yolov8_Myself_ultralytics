@@ -352,7 +352,7 @@ class Focus(nn.Module):
 #         y = F.conv2d(x, weight=weight_tensor, bias=None, stride=2, padding=0, dilation=1, groups=1)
 #         #z = self.conv(y)
 #         return self.conv(y)
-#
+
 
 
 
