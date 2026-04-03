@@ -78,23 +78,42 @@ yolo segment train \
     model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire_0330.yaml \
     data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
     epochs=300 \
-    imgsz=640 \
+    imgsz=1280 \
+    batch=64 \
+    workers=4 \
+    amp=True \
+    project=runs/my_wire_seg_exp \
+    name=yolov8s_wire_seg_v2_ \
+    augment=True \
+    mosaic=0 \
+    weight_decay=0.0005 \
+    device=0 \
+    box=2.0
+
+yolo segment train \
+    model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire_0330.yaml \
+    data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
+    pretrained=/workspace/runs/my_wire_seg_exp/yolov8s_wire_seg_v2_/weights/last.pt \
+    resume=True \
+    epochs=300 \
+    imgsz=1280 \
     batch=32 \
     workers=4 \
     amp=True \
     project=runs/my_wire_seg_exp \
-    name=yolov8s_wire_seg_v1_rect_boxgain \
+    name=yolov8s_wire_seg_v2_ \
     augment=True \
+    mosaic=0 \
     weight_decay=0.0005 \
     device=0 \
     box=2.0
-       
- 
+
     说明：
     rect=True
     启用长宽比训练，避免原图 1902×1080 被强制缩放到 640×640 导致横向压缩。
     保持线材的形状比例，提高小目标检测能力。
     box=2.0
+    mosaic=0 ：防止mosic图像增强时，破坏线材的特征连续性，且mosic后，线材过细，会直接被下采样消失掉。
     对 YOLOv8 来说，这个参数可以放大 box regression loss 的权重，对小目标更敏感。
     默认是 0.05~0.1 左右，你可以先试 2.0 或 1.5，看训练效果。
         
@@ -105,7 +124,7 @@ from ultralytics import YOLO
 if __name__ == "__main__":
 
     # 1️⃣ 加载分割模型结构（seg）
-    model = YOLO("/home/chenkejing/PycharmProjects/ultralytics/ultralytics/cfg/models/v8/yolov8-seg_focus_wire_0330.yaml")
+    model = YOLO("/home/chenkejing/PycharmProjects/ultralytics/ultralytics/cfg/models/v8/yolov8-seg_focus_wire.yaml")
 
     # 2️⃣ 加载预训练权重（非常重要）
     model.load("/home/chenkejing/PycharmProjects/ultralytics/yolov8s-seg.pt")
@@ -117,7 +136,7 @@ if __name__ == "__main__":
         data="coco8-seg_wire.yaml",      # 分割数据集 yaml
         epochs=300,
         imgsz=640,
-        batch=30,                       # seg 比 detect 更吃显存
+        batch=12,                       # seg 比 detect 更吃显存
         device=0,                       # -1 = CPU，0 = GPU
         workers=0,
 
