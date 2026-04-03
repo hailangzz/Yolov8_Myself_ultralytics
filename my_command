@@ -107,6 +107,11 @@
         # 2月10号
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_seg_v7.rknn
 
+            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v2_/weights/best.pt --input-shape 1 3 640 640 --sim
+
+            效果较好版本：
+            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 1280 1280 --sim
+            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 704 1280 --sim
 
 
     # 导出手势识别RKNN模型
@@ -138,6 +143,11 @@
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_5/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_0330.rknn
 
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_0401.rknn
+
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v2_/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_0403.rknn
+
+        效果较好的版本：
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_good.rknn
 
 rknn量化精度对比：
 
