@@ -80,6 +80,8 @@ yolo segment train \
     epochs=300 \
     imgsz=1280 \
     batch=64 \
+    
+    
     workers=4 \
     amp=True \
     project=runs/my_wire_seg_exp \
@@ -116,6 +118,67 @@ yolo segment train \
     mosaic=0 ：防止mosic图像增强时，破坏线材的特征连续性，且mosic后，线材过细，会直接被下采样消失掉。
     对 YOLOv8 来说，这个参数可以放大 box regression loss 的权重，对小目标更敏感。
     默认是 0.05~0.1 左右，你可以先试 2.0 或 1.5，看训练效果。
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    模型finetune两阶段
+    注意：
+        最优策略（强烈推荐）
+        🥇 方法1：混合训练（最稳）
+        real : public = 3:1 或 4:1 
+          
+        👉 核心思想：        
+        用真实数据“拉方向”
+        用公开数据“保基础”
+        
+    ✅ 给你改好的 finetune 版本（第一阶段）
+
+        👉 适应真实数据（推荐先跑这个）
+        
+        yolo segment train \
+            model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire_0330.yaml \
+            data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
+            pretrained=/workspace/runs/my_wire_seg_exp/yolov8s_wire_seg_v2_4/weights/last.pt \
+            epochs=40 \
+            imgsz=1280 \
+            batch=32 \
+            workers=4 \
+            amp=True \
+            project=runs/my_wire_seg_exp \
+            name=yolov8s_wire_seg_finetune_stage1 \
+            augment=True \
+            mosaic=0 \
+            weight_decay=0.0005 \
+            device=0 \
+            box=2.0 \
+            lr0=0.001 \
+            freeze=10
+            
+    ✅ 第二阶段 finetune（解冻全模型）
+        
+        👉 在第一阶段训练完之后，再跑：
+        
+        yolo segment train \
+            model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire_0330.yaml \
+            data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
+            pretrained=runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage1/weights/best.pt \
+            epochs=100 \
+            imgsz=1280 \
+            batch=32 \
+            workers=4 \
+            amp=True \
+            project=runs/my_wire_seg_exp \
+            name=yolov8s_wire_seg_finetune_stage2 \
+            augment=True \
+            mosaic=0 \
+            weight_decay=0.0003 \
+            device=0 \
+            box=2.0 \
+            lr0=0.0005 \
+            freeze=0 \
+            patience=10
+            
+            说明：patience=10 训练早停次数，如果val时10次都没有提升，则早停，防止过拟合
+            
         
 """
 

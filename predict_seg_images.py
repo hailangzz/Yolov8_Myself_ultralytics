@@ -40,7 +40,16 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
         print(f"[INFO] Processing {img_path}")
 
         # 推理
-        results = model(img_path, conf=conf_thres, task='segment')[0]
+        # results = model(img_path, conf=conf_thres, task='segment')[0]
+        # 推理
+        # 统一输入尺寸为 640x640
+        results = model(
+            img_path,
+            conf=conf_thres,
+            task='segment',
+            # imgsz=640  # 👈 强制输入 640x640
+            imgsz=1280  # 👈 强制输入 640x640
+        )[0]
 
         # 读取原图
         img = cv2.imread(img_path)
@@ -114,6 +123,8 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
 
         print(f"[INFO] Saved: {save_path}")
 
+    # 0323线材检测
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_5/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
 def parse_args():
 
@@ -151,7 +162,6 @@ def parse_args():
 
     return parser.parse_args()
 
-
 if __name__ == "__main__":
 
     args = parse_args()
@@ -166,11 +176,23 @@ if __name__ == "__main__":
     # 示例运行命令：
     # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image  --save_dir ./results/carpet  --conf 0.55
 
-    # 0316线材检测
-    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_2/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # 线材检测
+        # 0316线材检测
+        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_2/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
-    # 0323线材检测
-    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_4/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+        # 0327线材检测
+        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_5/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
-    # 0402液体检测：
-    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_image_test  --save_dir ./results/liquid  --conf 0.55
+        # 0331线材检测
+        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_rect_boxgain4/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+
+        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_5/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+
+        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+        #0407
+        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_4/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage1/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+
+    # 0401液体检测
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_image_test  --save_dir ./results/liquid  --conf 0.55
+
