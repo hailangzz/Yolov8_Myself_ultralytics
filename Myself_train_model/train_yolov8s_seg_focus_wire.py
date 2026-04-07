@@ -153,7 +153,7 @@ yolo segment train \
             lr0=0.001 \
             freeze=10
             
-    ✅ 第二阶段 finetune（解冻全模型）
+    ✅ 第二阶段 finetune（解冻部分backbone层，当前冻结7层）
         
         👉 在第一阶段训练完之后，再跑：
         
@@ -166,6 +166,7 @@ yolo segment train \
             batch=32 \
             workers=4 \
             amp=True \
+            resume=True \
             project=runs/my_wire_seg_exp \
             name=yolov8s_wire_seg_finetune_stage2 \
             augment=True \
@@ -174,8 +175,8 @@ yolo segment train \
             device=0 \
             box=2.0 \
             lr0=0.0005 \
-            freeze=0 \
-            patience=10
+            freeze=7 \
+            patience=25
             
             说明：patience=10 训练早停次数，如果val时10次都没有提升，则早停，防止过拟合
             
