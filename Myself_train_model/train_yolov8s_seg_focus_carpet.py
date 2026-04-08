@@ -17,6 +17,8 @@ from ultralytics import YOLO
 
 
 
+
+
 from ultralytics import YOLO
 
 if __name__ == "__main__":
@@ -26,7 +28,7 @@ if __name__ == "__main__":
 
     # 2️⃣ 加载预训练权重（非常重要）
     # model.load("/home/chenkejing/PycharmProjects/ultralytics/yolov8s-seg.pt")
-    model.load("/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_6/weights/best.pt")
+    model.load("/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt")
 
     # 3️⃣ 开始训练
     results = model.train(
@@ -34,9 +36,9 @@ if __name__ == "__main__":
         data="coco8-seg_carpet.yaml",      # 分割数据集 yaml
         epochs=300,
         imgsz=640,
-        batch=14,                       # seg 比 detect 更吃显存
+        batch=24,                       # seg 比 detect 更吃显存
         device=0,                       # -1 = CPU，0 = GPU
-        workers=0,
+        workers=4,
 
         optimizer="SGD",                # ⭐ 稳定，利于部署
         cos_lr=True,
