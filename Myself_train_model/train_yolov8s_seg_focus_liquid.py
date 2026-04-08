@@ -78,8 +78,8 @@ yolo segment train \
     model=/workspace/data/TrainingScript/liquid_seg/yolov8-seg_focus_liquid.yaml \
     data=/workspace/data/TrainingScript/liquid_seg/seg_liquid.yaml \
     epochs=300 \
-    imgsz=1280 \
-    batch=32 \
+    imgsz=960 \
+    batch=64 \
     workers=4 \
     amp=True \
     project=runs/my_liquid_seg_exp \
@@ -108,26 +108,27 @@ if __name__ == "__main__":
     model = YOLO("/home/chenkejing/PycharmProjects/ultralytics/ultralytics/cfg/models/v8/yolov8-seg_focus_liquid_0330.yaml")
 
     # 2️⃣ 加载预训练权重（非常重要）
-    model.load("/home/chenkejing/PycharmProjects/ultralytics/yolov8s-seg.pt")
+    model.load("/home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_exp/yolov8s_liquid_seg_v1_rect_boxgain/weights/best.pt")
     # model.load("/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_2/weights/last.pt")
 
     # 3️⃣ 开始训练
     results = model.train(
         task="segment",                 # ⭐ 必须指定
-        data="coco8-seg_liquid.yaml",      # 分割数据集 yaml
+        data="seg_liquid_local.yaml",      # 分割数据集 yaml
         epochs=300,
-        imgsz=640,
-        batch=30,                       # seg 比 detect 更吃显存
+        imgsz=960,
+        batch=6,                       # seg 比 detect 更吃显存
         device=0,                       # -1 = CPU，0 = GPU
-        workers=0,
-
+        workers=8,
+        multi_scale=True,
+        cache=True,
         optimizer="SGD",                # ⭐ 稳定，利于部署
         cos_lr=True,
         amp=False,                      # ⭐ ONNX/RKNN 强烈建议关  /amp 控制的是「训得快不快 vs 稳不稳」
         augment=True,
-        dropout=0.1,
+
         project="runs/my_liquid_seg_exp",
-        name="yolov8s_liquid_seg_v1_",
+        name="yolov8s_liquid_seg_v2_",
         # resume=False                    # 控制的是「训不训旧的状态」
         resume=True
     )
