@@ -73,22 +73,23 @@ yolo segment train \
 
 
 # 线材小目标检测
+# tmux new -s yolov8_seg_training
 
  yolo segment train \
     model=/workspace/data/TrainingScript/liquid_seg/yolov8-seg_focus_liquid.yaml \
     data=/workspace/data/TrainingScript/liquid_seg/seg_liquid.yaml \
     epochs=300 \
     imgsz=960 \
-    batch=64 \
-    workers=4 \
+    batch=48 \
+    workers=6 \
     amp=True \
     project=runs/my_liquid_seg_exp \
     name=yolov8s_liquid_seg_v1_rect_boxgain \
     augment=True \
     weight_decay=0.0005 \
-    device=0 \
-    box=2.0
-       
+    device=0 
+
+
 
     说明：
     rect=True
