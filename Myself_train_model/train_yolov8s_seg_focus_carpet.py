@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     # 2️⃣ 加载预训练权重（非常重要）
     # model.load("/home/chenkejing/PycharmProjects/ultralytics/yolov8s-seg.pt")
-    model.load("/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt")
+    model.load("/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_8/weights/best.pt")
 
     # 3️⃣ 开始训练
     results = model.train(
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         data="coco8-seg_carpet.yaml",      # 分割数据集 yaml
         epochs=300,
         imgsz=640,
-        batch=24,                       # seg 比 detect 更吃显存
+        batch=20,                       # seg 比 detect 更吃显存
         device=0,                       # -1 = CPU，0 = GPU
         workers=4,
 
