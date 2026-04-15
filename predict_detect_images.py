@@ -96,4 +96,4 @@ if __name__ == "__main__":
 
     #液体检测
     #3月18日
-    # python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8s_Liquad_det_v1_5/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_image_test --save_dir ./results/liquad_model_focus_v3
+    # python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8s_Liquad_det_v1_5/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquad_model_focus_v3

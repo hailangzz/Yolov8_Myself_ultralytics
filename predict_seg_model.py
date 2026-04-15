@@ -8,11 +8,11 @@ import glob
 # -----------------------------
 # 配置
 # -----------------------------
-model_path = '/home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_2/weights/best.pt'  # 模型路径
-input_dir = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test'  # 输入图像目录
-output_dir = './results/wire'  # 保存目录
+model_path = '/home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain7/weights/last.pt'  # 模型路径
+input_dir = '/images_mode_test/liquad_real_image'  # 输入图像目录
+output_dir = './results/liquid'  # 保存目录
 img_exts = ['*.jpg', '*.png', '*.jpeg']  # 支持的图片格式
-img_size = 640  # 推理输入尺寸
+img_size = 960  # 推理输入尺寸
 conf_thresh = 0.25  # 置信度阈值
 iou_thresh = 0.45  # NMS 阈值
 device = '0'  # GPU 0，如果没有 GPU 改成 'cpu'

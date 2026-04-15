@@ -72,7 +72,7 @@ yolo segment train \
     resume=True：自定加载，项目目录下的模型。与pretrained（手动指定预训练模型）一般不同时使用
 
 
-# 线材小目标检测
+# 小目标检测
 # tmux new -s yolov8_seg_training
 
  yolo segment train \

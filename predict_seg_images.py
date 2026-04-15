@@ -11,26 +11,20 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
-    # 加载 YOLOv8-seg 模型
+    # 加载模型
     model = YOLO(model_path)
     model.to(device)
 
-    # 创建结果保存目录
+    # 创建保存目录
     os.makedirs(save_dir, exist_ok=True)
 
-    # 支持的图片格式
     exts = ('.jpg', '.jpeg', '.png', '.bmp')
 
-    # 生成固定颜色表，每个类别一个颜色
+    # 所有类别统一颜色（绿色）
     num_classes = len(model.names)
-    # np.random.seed(1)
-    # class_colors = {i: np.random.randint(0, 255, 3) for i in range(num_classes)}
+    # class_colors = {i: np.array([0, 255, 0]) for i in range(num_classes)}
+    class_colors = {i: (0, 255, 0) for i in range(num_classes)}
 
-    # 所有类别统一使用亮绿色
-    num_classes = len(model.names)
-    class_colors = {i: np.array([0, 255, 0]) for i in range(num_classes)}
-
-    # 遍历图片目录
     for img_name in os.listdir(imgs_dir):
 
         if not img_name.lower().endswith(exts):
@@ -40,57 +34,41 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
         print(f"[INFO] Processing {img_path}")
 
         # 推理
-        # results = model(img_path, conf=conf_thres, task='segment')[0]
-        # 推理
-        # 统一输入尺寸为 640x640
         results = model(
             img_path,
             conf=conf_thres,
             task='segment',
-            # imgsz=640  # 👈 强制输入 640x640
-            imgsz=1280  # 👈 强制输入 640x640
-            # imgsz=960  # 👈 强制输入 640x640
+            # imgsz=640
+            imgsz=960
+            # imgsz=1280
         )[0]
 
         # 读取原图
         img = cv2.imread(img_path)
         overlay = img.copy()
 
-        img_h, img_w = img.shape[:2]
-
-        # 绘制分割 mask
+        # ========================
+        # ✅ 正确绘制 mask（关键修复）
+        # ========================
         if results.masks is not None:
 
-            masks = results.masks.data.cpu().numpy()  # [N, H, W]
+            segments = results.masks.xy  # 已经映射回原图坐标
             classes = results.boxes.cls.cpu().numpy()
 
-            num_instances = masks.shape[0]
-
-            for i in range(num_instances):
-
-                mask = masks[i]
-
-                # -------- 关键修复：resize mask 到原图尺寸 --------
-                mask = cv2.resize(
-                    mask,
-                    (img_w, img_h),
-                    interpolation=cv2.INTER_NEAREST
-                )
-
-                mask = mask.astype(bool)
-                # ----------------------------------------------
+            for i, segment in enumerate(segments):
+                pts = np.array(segment, dtype=np.int32)
 
                 cls = int(classes[i])
                 color = class_colors[cls]
 
-                overlay[mask] = (
-                    0.5 * overlay[mask] + 0.5 * color
-                ).astype(np.uint8)
+                cv2.fillPoly(overlay, [pts], color)
 
         # 半透明叠加
         img = cv2.addWeighted(overlay, 0.7, img, 0.3, 0)
 
-        # 绘制检测框和类别
+        # ========================
+        # 绘制检测框
+        # ========================
         if results.boxes is not None:
 
             for box in results.boxes:
@@ -119,13 +97,10 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
 
         # 保存结果
         save_path = os.path.join(save_dir, img_name)
-
         cv2.imwrite(save_path, img)
 
         print(f"[INFO] Saved: {save_path}")
 
-    # 0323线材检测
-    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_5/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
 def parse_args():
 
@@ -163,6 +138,7 @@ def parse_args():
 
     return parser.parse_args()
 
+
 if __name__ == "__main__":
 
     args = parse_args()
@@ -173,6 +149,7 @@ if __name__ == "__main__":
         args.save_dir,
         args.conf
     )
+
 
     # 示例运行命令：
     # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image  --save_dir ./results/carpet  --conf 0.55
@@ -196,6 +173,8 @@ if __name__ == "__main__":
         # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage22/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
     # 0401液体检测
-    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_image_test  --save_dir ./results/liquid  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
 
-    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_exp/yolov8s_liquid_seg_v1_rect_boxgain/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_image_test  --save_dir ./results/liquid  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_exp/yolov8s_liquid_seg_v1_rect_boxgain/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
+
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain7/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55

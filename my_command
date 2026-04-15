@@ -58,6 +58,9 @@
 
             python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt --input-shape 1 3 640 640 --sim
 
+            4月13号
+            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_10/weights/best.pt --input-shape 1 3 640 640 --sim
+
 
 
         #导出手势识别模型
@@ -77,7 +80,19 @@
 
             4月1号
             python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 640 640 --sim
-            python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 1280 720 --sim
+
+            python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 768 1280 --sim
+                （注：模型训练尺寸为1280时）
+            4月9号 ：960*576、640*640
+            python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage22/weights/best.pt --input-shape 1 3 576 960 --sim
+            python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage22/weights/best.pt --input-shape 1 3 640 640 --sim
+            python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage22/weights/best.pt --input-shape 1 3 960 960 --sim
+
+            python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage22/weights/best.pt --input-shape 1 3 1280 1280 --sim
+
+        #导出污渍检测模型：
+            4月15号：
+            python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain7/weights/best.pt --input-shape 1 3 960 960 --sim
 
 
     特别说明：当使用Focus算子时，模型训练时，使用原生Fouce算子训练。模型导出时，则该为自定义Fouce算子
@@ -104,14 +119,12 @@
         # 1月9号
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_2/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_seg_v1.rknn
 
+
         # 2月10号
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_seg_v7.rknn
 
-            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v2_/weights/best.pt --input-shape 1 3 640 640 --sim
-
-            效果较好版本：
-            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 1280 1280 --sim
-            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 704 1280 --sim
+        # 4月13号
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_10/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_seg_v10.rknn
 
 
     # 导出手势识别RKNN模型
@@ -132,6 +145,13 @@
 
     # 导出线材分割RKNN模型
 
+        python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v2_/weights/best.pt --input-shape 1 3 640 640 --sim
+
+            效果较好版本：
+            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 1280 1280 --sim
+            python export_segment_onnx_model_static.py -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.pt --input-shape 1 3 704 1280 --sim
+
+
         # 3月17日
         # FP32量化
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_2/weights/best.onnx rk3588 fp /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_seg_v2_fp32.rknn
@@ -149,11 +169,27 @@
         效果较好的版本：
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_rect_boxgain4/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_good.rknn
 
+        4月9日：
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage22/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_960_576.rknn
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage22/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_960p.rknn
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage22/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_1280p.rknn
+
+    导出污渍检测模型：
+        #4月15号：
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain7/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/liquid_seg_v1_rect_boxgain7_3588_960p.rknn
+
+
+
 rknn量化精度对比：
 
     python quantitative_accuracy.py ./rknn_models/carpet_sa_v2_fp32.rknn ./rknn_models/carpet_sa_v2.rknn ./test_image/image_343.jpg
 
     python QuantitativeAccuracyTesting/quantitative_accuracy.py ./rknn_models/wire_seg_v2_fp32.rknn ./rknn_models/carpet_sa_v2.rknn ./images_mode_test/carpet_real_image/image_3.jpg
+
+
+
+
+
 
 
 
