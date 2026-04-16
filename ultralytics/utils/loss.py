@@ -226,7 +226,7 @@ class v8DetectionLoss:
                 matches = i == j
                 if n := matches.sum():
                     out[j, :n] = targets[matches, 1:]
-            out[..., 1:5] = xywh2xyxy(out[..., 1:5].mul_(scale_tensor))
+            out[..., 1:5] = xywh2xyxy(out[..., 1:5].mul_(scale_tensor)) #out为目标框，在原图中的实际像素坐标位置
         return out
 
     def bbox_decode(self, anchor_points: torch.Tensor, pred_dist: torch.Tensor) -> torch.Tensor:
@@ -247,13 +247,13 @@ class v8DetectionLoss:
             [xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2
         ).split((self.reg_max * 4, self.nc), 1)
 
-        pred_scores = pred_scores.permute(0, 2, 1).contiguous()
-        pred_distri = pred_distri.permute(0, 2, 1).contiguous()
+        pred_scores = pred_scores.permute(0, 2, 1).contiguous()  # 类别预测结果
+        pred_distri = pred_distri.permute(0, 2, 1).contiguous()  # 定位预测结果
 
         dtype = pred_scores.dtype
         batch_size = pred_scores.shape[0]
         imgsz = torch.tensor(feats[0].shape[2:], device=self.device, dtype=dtype) * self.stride[0]
-        anchor_points, stride_tensor = make_anchors(feats, self.stride, 0.5)
+        anchor_points, stride_tensor = make_anchors(feats, self.stride, 0.5)  #生成anchors
 
         # ------------------------
         # Targets
@@ -262,7 +262,7 @@ class v8DetectionLoss:
             (batch["batch_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]), 1
         )
         # print(targets)
-        targets = self.preprocess(targets, batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
+        targets = self.preprocess(targets, batch_size, scale_tensor=imgsz[[1, 0, 1, 0]]) #将归一化坐标，转换为原图像素坐标
         gt_labels, gt_bboxes = targets.split((1, 4), 2)
 
         # 过滤 ignore 类别
