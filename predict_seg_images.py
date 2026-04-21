@@ -38,8 +38,8 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
             img_path,
             conf=conf_thres,
             task='segment',
-            # imgsz=640
-            imgsz=960
+            imgsz=640
+            # imgsz=960
             # imgsz=1280
         )[0]
 
@@ -153,6 +153,16 @@ if __name__ == "__main__":
 
     # 示例运行命令：
     # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image  --save_dir ./results/carpet  --conf 0.55
+
+    # 地毯检测
+        #0416
+        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_10/weights/best.pt  --imgs_dir /home/chenkejing/Desktop/images  --save_dir ./results/carpet  --conf 0.55
+
+        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage1_head_only/weights/best.pt  --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/carpet_detect/date0416/images  --save_dir ./results/carpet  --conf 0.55
+
+        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune/weights/best.pt  --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/carpet_detect/date0416/images  --save_dir ./results/carpet  --conf 0.55
+
+
 
     # 线材检测
         # 0316线材检测

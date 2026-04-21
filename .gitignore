@@ -204,3 +204,5 @@ calibration_*.npy
 # onnx and pt models
 *.onnx
 *.pt
+
+/Myself_train_finetune_model/runs
