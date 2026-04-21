@@ -115,6 +115,8 @@ if __name__ == "__main__":
     # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /data/database/AITotal_SegmentDatabase/carpetDatabaseSegment/images/train  --save_dir ./results/hand_exist_sample
     # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /data/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/train  --save_dir ./results/hand_exist_sample
 
+    # 测试手势识别模型效果，并保存图像
+    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/my_hand_finetune/stage2_full_finetune/weights/best.pt --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/hand_detect/date0420/images  --save_dir ./results/hand_exist_sample --save_only_with_boxes true
 
 #############
     # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.pt --imgs_dir /home/chenkejing/Desktop/hand_detect --save_dir ./results/hand_focus_sa_v2
@@ -131,3 +133,4 @@ if __name__ == "__main__":
     #液体检测
     #3月18日
     # python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8s_Liquad_det_v1_5/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquad_model_focus_v3
+

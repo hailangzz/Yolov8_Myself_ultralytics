@@ -206,3 +206,4 @@ calibration_*.npy
 *.pt
 
 /Myself_train_finetune_model/runs
+/.github/workflows/
