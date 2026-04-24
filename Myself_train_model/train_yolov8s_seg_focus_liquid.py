@@ -101,39 +101,38 @@ yolo segment train \
         
 """
 
-from ultralytics import YOLO
 
 if __name__ == "__main__":
-
     # 1️⃣ 加载分割模型结构（seg）
-    model = YOLO("/home/chenkejing/PycharmProjects/ultralytics/ultralytics/cfg/models/v8/yolov8-seg_focus_liquid_0330.yaml")
+    model = YOLO(
+        "/home/chenkejing/PycharmProjects/ultralytics/ultralytics/cfg/models/v8/yolov8-seg_focus_liquid_0330.yaml"
+    )
 
     # 2️⃣ 加载预训练权重（非常重要）
-    model.load("/home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_exp/yolov8s_liquid_seg_v1_rect_boxgain/weights/best.pt")
+    model.load(
+        "/home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_exp/yolov8s_liquid_seg_v1_rect_boxgain/weights/best.pt"
+    )
     # model.load("/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_2/weights/last.pt")
 
     # 3️⃣ 开始训练
     results = model.train(
-        task="segment",                 # ⭐ 必须指定
-        data="seg_liquid_local.yaml",      # 分割数据集 yaml
+        task="segment",  # ⭐ 必须指定
+        data="seg_liquid_local.yaml",  # 分割数据集 yaml
         epochs=300,
         imgsz=960,
-        batch=6,                       # seg 比 detect 更吃显存
-        device=0,                       # -1 = CPU，0 = GPU
+        batch=6,  # seg 比 detect 更吃显存
+        device=0,  # -1 = CPU，0 = GPU
         workers=8,
         multi_scale=True,
         cache=True,
-        optimizer="SGD",                # ⭐ 稳定，利于部署
+        optimizer="SGD",  # ⭐ 稳定，利于部署
         cos_lr=True,
-        amp=False,                      # ⭐ ONNX/RKNN 强烈建议关  /amp 控制的是「训得快不快 vs 稳不稳」
+        amp=False,  # ⭐ ONNX/RKNN 强烈建议关  /amp 控制的是「训得快不快 vs 稳不稳」
         augment=True,
-
         project="runs/my_liquid_seg_exp",
         name="yolov8s_liquid_seg_v2_",
         # resume=False                    # 控制的是「训不训旧的状态」
-        resume=True
+        resume=True,
     )
 
     # watch -n 1 nvidia-smi #监控GPU占用信息
-
-
