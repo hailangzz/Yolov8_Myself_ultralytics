@@ -39,12 +39,26 @@ from .utils import (
     load_dataset_cache_file,
     save_dataset_cache_file,
     verify_image,
-    verify_image_label,
+    verify_image_label, # （数据解析）决定“原始数据有没有这些字段”
 )
 
 # Ultralytics dataset *.cache version, >= 1.0.0 for Ultralytics YOLO models
 DATASET_CACHE_VERSION = "1.0.3"
 
+
+"""
+JSON / TXT
+   ↓
+cache_labels（收集字段）
+   ↓
+task开关（决定用哪些字段）
+   ↓
+update_labels_info（统一成 Instances）
+   ↓
+Format（决定输出 tensor）
+   ↓
+model training
+"""
 
 class YOLODataset(BaseDataset):
     """Dataset class for loading object detection and/or segmentation labels in YOLO format.
@@ -71,7 +85,7 @@ class YOLODataset(BaseDataset):
         >>> dataset.get_labels()
     """
 
-    def __init__(self, *args, data: dict | None = None, task: str = "detect", **kwargs):
+    def __init__(self, *args, data: dict | None = None, task: str = "detect", dataset_id: int = 0, dataset_name: str = "default", **kwargs):
         """Initialize the YOLODataset.
 
         Args:
@@ -80,14 +94,21 @@ class YOLODataset(BaseDataset):
             *args (Any): Additional positional arguments for the parent class.
             **kwargs (Any): Additional keyword arguments for the parent class.
         """
+        # task 开关，根据不同类型的任务，确定数据集，使用的到的标签数据结构。
         self.use_segments = task == "segment"
         self.use_keypoints = task == "pose"
         self.use_obb = task == "obb"
-        self.data = data
-        assert not (self.use_segments and self.use_keypoints), "Can not use both segments and keypoints."
+        self.data = data or {}
+
+        # ✅ 外部传入优先（关键）
+        self.dataset_id = dataset_id
+        self.dataset_name = dataset_name
+        self.class_map = self.data.get("class_map", None)
+
+        assert not (self.use_segments and self.use_keypoints), "Cannot use both segments and keypoints."
         super().__init__(*args, channels=self.data.get("channels", 3), **kwargs)
 
-    def cache_labels(self, path: Path = Path("./labels.cache")) -> dict:
+    def cache_labels(self, path: Path = Path("./labels.cache")) -> dict: # （结构生成） 决定“label dict 初始长什么样”
         """Cache dataset labels, check images and read shapes.
 
         Args:
@@ -108,7 +129,7 @@ class YOLODataset(BaseDataset):
             )
         with ThreadPool(NUM_THREADS) as pool:
             results = pool.imap(
-                func=verify_image_label,
+                func=verify_image_label,  #解析数据
                 iterable=zip(
                     self.im_files,
                     self.label_files,
@@ -127,6 +148,7 @@ class YOLODataset(BaseDataset):
                 ne += ne_f
                 nc += nc_f
                 if im_file:
+                    # 此处，第一层控制：Dataset 读取阶段（决定“有哪些原始字段”）
                     x["labels"].append(
                         {
                             "im_file": im_file,
@@ -135,6 +157,8 @@ class YOLODataset(BaseDataset):
                             "bboxes": lb[:, 1:],  # n, 4
                             "segments": segments,
                             "keypoints": keypoint,
+                            "dataset_id": self.dataset_id,  # ⭐新增
+                            "dataset_name": self.dataset_name,
                             "normalized": True,
                             "bbox_format": "xywh",
                         }
@@ -182,11 +206,17 @@ class YOLODataset(BaseDataset):
         # Read cache
         [cache.pop(k) for k in ("hash", "version", "msgs")]  # remove items
         labels = cache["labels"]
+
         if not labels:
             raise RuntimeError(
                 f"No valid images found in {cache_path}. Images with incorrectly formatted labels are ignored. {HELP_URL}"
             )
         self.im_files = [lb["im_file"] for lb in labels]  # update im_files
+
+        # ✅ 强制覆盖（避免 cache 污染）
+        for lb in labels:
+            lb["dataset_id"] = self.dataset_id
+            lb["dataset_name"] = self.dataset_name
 
         # Check if the dataset is all boxes or all segments
         lengths = ((len(lb["cls"]), len(lb["bboxes"]), len(lb["segments"])) for lb in labels)
@@ -219,6 +249,8 @@ class YOLODataset(BaseDataset):
             transforms = v8_transforms(self, self.imgsz, hyp)
         else:
             transforms = Compose([LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
+
+        # batch 最终输出哪些 tensor
         transforms.append(
             Format(
                 bbox_format="xywh",
@@ -230,7 +262,7 @@ class YOLODataset(BaseDataset):
                 mask_ratio=hyp.mask_ratio,
                 mask_overlap=hyp.overlap_mask,
                 bgr=hyp.bgr if self.augment else 0.0,  # only affect training.
-            )
+            )   # 决定“batch里最终有哪些 tensor”
         )
         return transforms
 
@@ -247,35 +279,82 @@ class YOLODataset(BaseDataset):
         self.transforms = self.build_transforms(hyp)
 
     def update_labels_info(self, label: dict) -> dict:
-        """Update label format for different tasks.
 
-        Args:
-            label (dict): Label dictionary containing bboxes, segments, keypoints, etc.
-
-        Returns:
-            (dict): Updated label dictionary with instances.
-
-        Notes:
-            cls is not with bboxes now, classification and semantic segmentation need an independent cls label
-            Can also support classification and semantic segmentation by adding or removing dict keys there.
-        """
+        cls = label["cls"]
         bboxes = label.pop("bboxes")
         segments = label.pop("segments", [])
         keypoints = label.pop("keypoints", None)
         bbox_format = label.pop("bbox_format")
         normalized = label.pop("normalized")
 
-        # NOTE: do NOT resample oriented boxes
+        dataset_id = label.get("dataset_id", self.dataset_id)
+        dataset_name = label.get("dataset_name", self.dataset_name)
+
+        # ===============================
+        # ⭐ class mapping
+        # ===============================
+        if self.class_map is not None:
+            cls_flat = cls.reshape(-1)
+
+            mapped = np.array(
+                [self.class_map.get(int(c), -1) for c in cls_flat],
+                dtype=np.int64
+            )
+
+            valid = mapped >= 0
+
+            if valid.sum() == 0:
+                cls = np.zeros((0, 1), dtype=np.float32)
+                bboxes = np.zeros((0, 4), dtype=np.float32)
+                segments = []
+            else:
+                cls = mapped[valid].astype(np.float32).reshape(-1, 1)
+                bboxes = bboxes[valid]
+
+                if isinstance(segments, list) and len(segments) == len(cls_flat):
+                    idx = np.where(valid)[0]
+                    segments = [segments[i] for i in idx]
+
+        # ===============================
+        # ⭐ segments normalize
+        # ===============================
         segment_resamples = 100 if self.use_obb else 1000
+
         if len(segments) > 0:
-            # make sure segments interpolate correctly if original length is greater than segment_resamples
             max_len = max(len(s) for s in segments)
-            segment_resamples = (max_len + 1) if segment_resamples < max_len else segment_resamples
-            # list[np.array(segment_resamples, 2)] * num_samples
-            segments = np.stack(resample_segments(segments, n=segment_resamples), axis=0)
+            segment_resamples = max(segment_resamples, max_len + 1)
+            segments = np.stack(
+                resample_segments(segments, n=segment_resamples),
+                axis=0
+            )
         else:
             segments = np.zeros((0, segment_resamples, 2), dtype=np.float32)
-        label["instances"] = Instances(bboxes, segments, keypoints, bbox_format=bbox_format, normalized=normalized)
+
+        # ===============================
+        # ⭐ Instances
+        # ===============================
+        inst = Instances(
+            bboxes,
+            segments,
+            keypoints,
+            bbox_format=bbox_format,
+            normalized=normalized
+        )
+
+        inst.dataset_id = dataset_id
+        inst.dataset_name = dataset_name
+
+        # ===============================
+        # ⭐ write back
+        # ===============================
+        label["cls"] = cls
+        label["bboxes"] = bboxes
+        label["segments"] = segments
+
+        label["instances"] = inst
+        label["dataset_id"] = dataset_id
+        label["dataset_name"] = dataset_name
+
         return label
 
     @staticmethod
@@ -289,22 +368,35 @@ class YOLODataset(BaseDataset):
             (dict): Collated batch with stacked tensors.
         """
         new_batch = {}
-        batch = [dict(sorted(b.items())) for b in batch]  # make sure the keys are in the same order
+        batch = [dict(sorted(b.items())) for b in batch]
         keys = batch[0].keys()
         values = list(zip(*[list(b.values()) for b in batch]))
+
         for i, k in enumerate(keys):
-            value = values[i]
+            v = values[i]
+
             if k in {"img", "text_feats"}:
-                value = torch.stack(value, 0)
+                v = torch.stack(v, 0)
             elif k == "visuals":
-                value = torch.nn.utils.rnn.pad_sequence(value, batch_first=True)
+                v = torch.nn.utils.rnn.pad_sequence(v, batch_first=True)
+
             if k in {"masks", "keypoints", "bboxes", "cls", "segments", "obb"}:
-                value = torch.cat(value, 0)
-            new_batch[k] = value
-        new_batch["batch_idx"] = list(new_batch["batch_idx"])
-        for i in range(len(new_batch["batch_idx"])):
-            new_batch["batch_idx"][i] += i  # add target image index for build_targets()
-        new_batch["batch_idx"] = torch.cat(new_batch["batch_idx"], 0)
+                v = torch.cat(v, 0)
+
+            new_batch[k] = v
+
+        # batch index
+        new_batch["batch_idx"] = torch.cat([
+            torch.full((len(b["cls"]),), i, dtype=torch.long)
+            for i, b in enumerate(batch)
+        ], 0)
+
+        # dataset id (instance-level alignment)
+        new_batch["dataset_id"] = torch.cat([
+            torch.full((b["instances"].bboxes.shape[0],), b["dataset_id"], dtype=torch.long)
+            for b in batch
+        ], 0)
+
         return new_batch
 
 

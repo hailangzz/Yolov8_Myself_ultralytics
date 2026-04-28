@@ -33,6 +33,54 @@ from ultralytics.utils import RANK, colorstr
 from ultralytics.utils.checks import check_file
 from ultralytics.utils.torch_utils import TORCH_2_0
 
+from torch.utils.data import WeightedRandomSampler, ConcatDataset, DistributedSampler
+
+
+def build_multi_dataset(cfg, batch, data, mode, rect, stride, multi_modal):
+    dataset_cls = YOLOMultiModalDataset if multi_modal else YOLODataset
+
+    datasets = []
+    sample_weights = []
+
+    multi_cfgs = data["multi_datasets"]
+
+    for i, d in enumerate(multi_cfgs):
+
+        img_path = d["train"] if mode == "train" else d.get("val", d["train"])
+        weight = float(d.get("weight", 1.0))
+
+        ds = dataset_cls(
+            img_path=img_path,
+            imgsz=cfg.imgsz,
+            batch_size=batch,
+            augment=mode == "train",
+            hyp=cfg,
+            rect=cfg.rect or rect,
+            cache=cfg.cache or None,
+            single_cls=cfg.single_cls or False,
+            stride=stride,
+            pad=0.0 if mode == "train" else 0.5,
+            prefix=colorstr(f"{mode}-{d.get('name', i)}: "),
+            task=cfg.task,
+            classes=cfg.classes,
+
+            # ⭐⭐⭐ 核心修改在这里
+            data={
+                **d.get("data", {}),
+                "class_map": d.get("class_map", None),
+            },
+
+            fraction=cfg.fraction if mode == "train" else 1.0,
+            dataset_id=i,
+            dataset_name=d.get("name", f"dataset_{i}"),
+        )
+
+        datasets.append(ds)
+
+        # ⭐ sample-level 权重（用于 WeightedRandomSampler）
+        sample_weights.extend([weight] * len(ds))
+
+    return datasets, sample_weights
 
 class InfiniteDataLoader(dataloader.DataLoader):
     """Dataloader that reuses workers for infinite iteration.
@@ -231,6 +279,11 @@ def build_yolo_dataset(
     multi_modal: bool = False,
 ) -> Dataset:
     """Build and return a YOLO dataset based on configuration parameters."""
+
+    # ⭐⭐⭐ 关键入口
+    if isinstance(data, dict) and "multi_datasets" in data:
+        return build_multi_dataset(cfg, batch, data, mode, rect, stride, multi_modal)
+
     dataset = YOLOMultiModalDataset if multi_modal else YOLODataset
     return dataset(
         img_path=img_path,
@@ -290,50 +343,53 @@ def build_dataloader(
     rank: int = -1,
     drop_last: bool = False,
     pin_memory: bool = True,
+    sample_weights=None,
 ) -> InfiniteDataLoader:
-    """Create and return an InfiniteDataLoader or DataLoader for training or validation.
 
-    Args:
-        dataset (Dataset): Dataset to load data from.
-        batch (int): Batch size for the dataloader.
-        workers (int): Number of worker threads for loading data.
-        shuffle (bool, optional): Whether to shuffle the dataset.
-        rank (int, optional): Process rank in distributed training. -1 for single-GPU training.
-        drop_last (bool, optional): Whether to drop the last incomplete batch.
-        pin_memory (bool, optional): Whether to use pinned memory for dataloader.
-
-    Returns:
-        (InfiniteDataLoader): A dataloader that can be used for training or validation.
-
-    Examples:
-        Create a dataloader for training
-        >>> dataset = YOLODataset(...)
-        >>> dataloader = build_dataloader(dataset, batch=16, workers=4, shuffle=True)
-    """
     batch = min(batch, len(dataset))
-    nd = torch.cuda.device_count()  # number of CUDA devices
-    nw = min(os.cpu_count() // max(nd, 1), workers)  # number of workers
-    sampler = (
-        None
-        if rank == -1
-        else distributed.DistributedSampler(dataset, shuffle=shuffle)
-        if shuffle
-        else ContiguousDistributedSampler(dataset)
-    )
-    generator = torch.Generator()
-    generator.manual_seed(6148914691236517205 + RANK)
+    nd = torch.cuda.device_count()
+    nw = min(os.cpu_count() // max(nd, 1), workers)
+
+    sampler = None
+
+    # =========================
+    # ⭐ CASE 1: multi dataset weighted sampling
+    # =========================
+    if sample_weights is not None:
+
+        sample_weights = torch.DoubleTensor(sample_weights)
+
+        # ⭐ Distributed support
+        if rank != -1 and dist.is_initialized():
+            sampler = WeightedRandomSampler(
+                weights=sample_weights,
+                num_samples=len(sample_weights),
+                replacement=True
+            )
+        else:
+            sampler = WeightedRandomSampler(
+                weights=sample_weights,
+                num_samples=len(sample_weights),
+                replacement=True
+            )
+
+    # =========================
+    # fallback (YOLO default)
+    # =========================
+    else:
+        if rank != -1 and shuffle:
+            sampler = DistributedSampler(dataset, shuffle=True)
+
     return InfiniteDataLoader(
         dataset=dataset,
         batch_size=batch,
-        shuffle=shuffle and sampler is None,
+        shuffle=(sampler is None and shuffle),
         num_workers=nw,
         sampler=sampler,
-        prefetch_factor=4 if nw > 0 else None,  # increase over default 2
         pin_memory=nd > 0 and pin_memory,
         collate_fn=getattr(dataset, "collate_fn", None),
         worker_init_fn=seed_worker,
-        generator=generator,
-        drop_last=drop_last and len(dataset) % batch != 0,
+        drop_last=drop_last,
     )
 
 

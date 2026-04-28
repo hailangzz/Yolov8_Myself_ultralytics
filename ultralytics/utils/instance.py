@@ -184,6 +184,9 @@ class Instances:
     This class provides a unified interface for handling different types of object annotations including bounding boxes,
     segmentation masks, and keypoints. It supports various operations like scaling, normalization, clipping, and format
     conversion.
+    用于存储图像中检测到的对象的边界框、分割区域和关键点的容器。
+    此类提供了一个统一的接口，用于处理不同类型的对象标注，包括边界框、
+    分割掩码和关键点。它支持各种操作，例如缩放、归一化、裁剪和格式转换。
 
     Attributes:
         _bboxes (Bboxes): Internal object for handling bounding box operations.
@@ -327,6 +330,7 @@ class Instances:
             When using boolean indexing, make sure to provide a boolean array with the same length as the number of
             instances.
         """
+        #标签赋值
         segments = self.segments[index] if len(self.segments) else self.segments
         keypoints = self.keypoints[index] if self.keypoints is not None else None
         bboxes = self.bboxes[index]

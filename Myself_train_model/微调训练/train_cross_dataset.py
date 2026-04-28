@@ -18,7 +18,7 @@ dataset_list = [
     # 可以继续添加其他数据集图片
 ]
 
-ignore_classes = []  # 如果需要忽略某些类别填id，例如[-1]表示ignore
+ignore_classes = [1]  # 如果需要忽略某些类别填id，例如[-1]表示ignore
 
 dataset = CrossDatasetYOLO(dataset_list, img_size=640, ignore_class_ids=ignore_classes)
 loader = DataLoader(dataset, batch_size=2, shuffle=True, collate_fn=collate_fn)

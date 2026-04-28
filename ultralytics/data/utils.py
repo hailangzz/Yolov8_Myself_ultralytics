@@ -178,6 +178,7 @@ def verify_image(args: tuple) -> tuple:
 
 
 def verify_image_label(args: tuple) -> list:
+    # 解析标签数据信息
     """Verify one image-label pair."""
     im_file, lb_file, prefix, keypoint, num_cls, nkpt, ndim, single_cls = args
     # Number (missing, found, empty, corrupt), message, segments, keypoints

@@ -2028,7 +2028,8 @@ class Format:
     """A class for formatting image annotations for object detection, instance segmentation, and pose estimation tasks.
 
     This class standardizes image and instance annotations to be used by the `collate_fn` in PyTorch DataLoader.
-
+    用于格式化图像标注的类，这些标注可用于目标检测、实例分割和姿态估计任务。
+    此类将图像和实例标注标准化，以便 PyTorch DataLoader 中的 `collate_fn` 函数使用。
     Attributes:
         bbox_format (str): Format for bounding boxes. Options are 'xywh' or 'xyxy'.
         normalize (bool): Whether to normalize bounding boxes.

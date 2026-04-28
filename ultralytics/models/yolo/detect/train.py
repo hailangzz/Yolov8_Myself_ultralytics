@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from ultralytics.data import build_dataloader, build_yolo_dataset
+from ultralytics.data import build_dataloader, build_yolo_dataset, build_multi_dataset
 from ultralytics.engine.trainer import BaseTrainer
 from ultralytics.models import yolo
 from ultralytics.nn.tasks import DetectionModel
@@ -63,46 +63,140 @@ class DetectionTrainer(BaseTrainer):
         super().__init__(cfg, overrides, _callbacks)
 
 
+    # def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
+    #     """Build YOLO Dataset for training or validation.
+    #
+    #     Args:
+    #         img_path (str): Path to the folder containing images.
+    #         mode (str): 'train' mode or 'val' mode, users are able to customize different augmentations for each mode.
+    #         batch (int, optional): Size of batches, this is for 'rect' mode.
+    #
+    #     Returns:
+    #         (Dataset): YOLO dataset object configured for the specified mode.
+    #     """
+    #     gs = max(int(unwrap_model(self.model).stride.max() if self.model else 0), 32)
+    #     return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
+
     def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
-        """Build YOLO Dataset for training or validation.
-
-        Args:
-            img_path (str): Path to the folder containing images.
-            mode (str): 'train' mode or 'val' mode, users are able to customize different augmentations for each mode.
-            batch (int, optional): Size of batches, this is for 'rect' mode.
-
-        Returns:
-            (Dataset): YOLO dataset object configured for the specified mode.
-        """
         gs = max(int(unwrap_model(self.model).stride.max() if self.model else 0), 32)
-        return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
 
-    def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
-        """Construct and return dataloader for the specified mode.
+        data = self.data
 
-        Args:
-            dataset_path (str): Path to the dataset.
-            batch_size (int): Number of images per batch.
-            rank (int): Process rank for distributed training.
-            mode (str): 'train' for training dataloader, 'val' for validation dataloader.
+        # ⭐⭐⭐ MULTI DATASET ENTRY
+        if isinstance(data, dict) and "multi_datasets" in data:
+            datasets, sample_weights = build_multi_dataset(
+                cfg=self.args,
+                batch=batch,
+                data=data,
+                mode=mode,
+                rect=mode == "val",
+                stride=gs,
+                multi_modal=False,
+            )
 
-        Returns:
-            (DataLoader): PyTorch dataloader object.
-        """
-        assert mode in {"train", "val"}, f"Mode must be 'train' or 'val', not {mode}."
-        with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
+            from torch.utils.data import ConcatDataset
+            dataset = ConcatDataset(datasets)
+
+            # ⭐ attach weights for dataloader
+            dataset.sample_weights = sample_weights
+            return dataset
+
+        # fallback single dataset
+        return build_yolo_dataset(
+            self.args,
+            img_path,
+            batch,
+            data,
+            mode=mode,
+            rect=mode == "val",
+            stride=gs,
+        )
+
+    # def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
+    #     """Construct and return dataloader for the specified mode.
+    #
+    #     Args:
+    #         dataset_path (str): Path to the dataset.
+    #         batch_size (int): Number of images per batch.
+    #         rank (int): Process rank for distributed training.
+    #         mode (str): 'train' for training dataloader, 'val' for validation dataloader.
+    #
+    #     Returns:
+    #         (DataLoader): PyTorch dataloader object.
+    #     """
+    #     assert mode in {"train", "val"}, f"Mode must be 'train' or 'val', not {mode}."
+    #     with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
+    #         dataset = self.build_dataset(dataset_path, mode, batch_size)
+    #     shuffle = mode == "train"
+    #     if getattr(dataset, "rect", False) and shuffle:
+    #         LOGGER.warning("'rect=True' is incompatible with DataLoader shuffle, setting shuffle=False")
+    #         shuffle = False
+    #
+    #     return build_dataloader(
+    #         dataset,
+    #         batch=batch_size,
+    #         workers=self.args.workers if mode == "train" else self.args.workers * 2,
+    #         shuffle=shuffle,
+    #         rank=rank,
+    #         drop_last=self.args.compile and mode == "train",
+    #     )
+
+    # def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
+    #
+    #     assert mode in {"train", "val"}
+    #
+    #     with torch_distributed_zero_first(rank):
+    #         dataset = self.build_dataset(dataset_path, mode, batch_size)
+    #
+    #     shuffle = mode == "train"
+    #
+    #     if getattr(dataset, "rect", False) and shuffle:
+    #         LOGGER.warning("'rect=True' is incompatible with shuffle, disabling shuffle")
+    #         shuffle = False
+    #
+    #     # =========================
+    #     # ⭐ MULTI DATASET WEIGHTED SAMPLER
+    #     # =========================
+    #     sample_weights = getattr(dataset, "sample_weights", None)
+    #
+    #     return build_dataloader(
+    #         dataset,
+    #         batch=batch_size,
+    #         workers=self.args.workers if mode == "train" else self.args.workers * 2,
+    #         shuffle=shuffle,
+    #         rank=rank,
+    #         drop_last=self.args.compile and mode == "train",
+    #         sample_weights=sample_weights,  # ⭐⭐⭐ KEY FIX
+    #     )
+
+    def get_dataloader(self, dataset_path, batch_size=16, rank=0, mode="train"):
+
+        assert mode in {"train", "val"}
+
+        with torch_distributed_zero_first(rank):
             dataset = self.build_dataset(dataset_path, mode, batch_size)
+
         shuffle = mode == "train"
+
         if getattr(dataset, "rect", False) and shuffle:
-            LOGGER.warning("'rect=True' is incompatible with DataLoader shuffle, setting shuffle=False")
+            LOGGER.warning("'rect=True' incompatible with shuffle, disabling shuffle")
             shuffle = False
+
+        # ⭐ only train uses weights
+        sample_weights = getattr(dataset, "sample_weights", None) if mode == "train" else None
+        use_weighted = sample_weights is not None
+
+        if rank != -1 and use_weighted:
+            LOGGER.warning("DDP + weighted sampler not supported, falling back to shuffle")
+
         return build_dataloader(
             dataset,
             batch=batch_size,
             workers=self.args.workers if mode == "train" else self.args.workers * 2,
-            shuffle=shuffle,
+            shuffle=(shuffle and not use_weighted),
             rank=rank,
             drop_last=self.args.compile and mode == "train",
+            sample_weights=sample_weights if rank == -1 else None,
         )
 
     def preprocess_batch(self, batch: dict) -> dict:
