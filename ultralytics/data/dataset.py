@@ -105,8 +105,25 @@ class YOLODataset(BaseDataset):
         self.dataset_name = dataset_name
         self.class_map = self.data.get("class_map", None)
 
+        # ⭐ 新增
+        self.class_mask = None
+        if isinstance(self.data, dict) and "class_mask" in self.data:
+            self.class_mask = torch.tensor(self.data["class_mask"], dtype=torch.float32)
+
         assert not (self.use_segments and self.use_keypoints), "Cannot use both segments and keypoints."
         super().__init__(*args, channels=self.data.get("channels", 3), **kwargs)
+
+    def __getitem__(self, index):
+        sample = super().__getitem__(index)
+
+        # ⭐ 加 dataset 信息（你已有）
+        sample["dataset_id"] = self.dataset_id
+
+        # ⭐ 新增：class_mask
+        if self.class_mask is not None:
+            sample["class_mask"] = self.class_mask
+
+        return sample
 
     def cache_labels(self, path: Path = Path("./labels.cache")) -> dict: # （结构生成） 决定“label dict 初始长什么样”
         """Cache dataset labels, check images and read shapes.
@@ -397,6 +414,18 @@ class YOLODataset(BaseDataset):
             for b in batch
         ], 0)
 
+        # 推荐写法（你应该有 global num_classes）
+        num_classes = batch[0]["class_mask"].shape[0] if "class_mask" in batch[0] else 1
+
+        class_masks = []
+        for b in batch:
+            if "class_mask" in b:
+                class_masks.append(b["class_mask"])
+            else:
+                class_masks.append(torch.ones(num_classes))
+
+        new_batch["dataset_class_mask"] = torch.stack(class_masks)
+
         return new_batch
 
 
@@ -529,6 +558,18 @@ class GroundingDataset(YOLODataset):
         self.json_file = json_file
         self.max_samples = max_samples
         super().__init__(*args, task=task, data={"channels": 3}, **kwargs)
+
+    def __getitem__(self, index):
+        sample = super().__getitem__(index)
+
+        # ⭐ 加 dataset 信息（你已有）
+        sample["dataset_id"] = self.dataset_id
+
+        # ⭐ 新增：class_mask
+        if self.class_mask is not None:
+            sample["class_mask"] = self.class_mask
+
+        return sample
 
     def get_img_files(self, img_path: str) -> list:
         """The image files would be read in `get_labels` function, return empty list here.

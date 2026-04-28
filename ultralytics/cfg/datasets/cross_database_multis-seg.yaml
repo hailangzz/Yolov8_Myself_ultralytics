@@ -28,24 +28,35 @@ names:
 multi_datasets:
 
   - name: wire_A
+    id: 0   # ⭐ 必加（对应 database_id）
     weight: 1.0
     train: /home/chenkejing/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/train
     val: /home/chenkejing/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/val
+
     data:
       names:
         0: wire
-        # ⭐ 映射（local → global）
-        class_map:
-          0: 0   # wire -> wire
+
+      class_map:
+        0: 0
+
+      # ⭐ 新增：class_mask（核心）
+      class_mask: [1, 0, 0]
+
 
   - name: wire_B
-    weight: 5.0   # ⭐重点：小数据集提高权重
+    id: 1
+    weight: 5.0
+
     train: /home/chenkejing/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/train
     val: /home/chenkejing/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/val
+
     data:
       names:
         0: cable
 
       class_map:
-        0: 1   # cable -> global cable
+        0: 1
 
+      # ⭐ 新增
+      class_mask: [0, 1, 0]

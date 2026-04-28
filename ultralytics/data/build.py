@@ -68,6 +68,7 @@ def build_multi_dataset(cfg, batch, data, mode, rect, stride, multi_modal):
             data={
                 **d.get("data", {}),
                 "class_map": d.get("class_map", None),
+                "class_mask": d.get("class_mask", None),  # ⭐
             },
 
             fraction=cfg.fraction if mode == "train" else 1.0,
