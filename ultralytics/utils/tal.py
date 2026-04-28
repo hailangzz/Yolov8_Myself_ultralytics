@@ -74,6 +74,7 @@ class TaskAlignedAssigner(nn.Module):
                 torch.zeros_like(pd_scores),
                 torch.zeros_like(pd_scores[..., 0]),
                 torch.zeros_like(pd_scores[..., 0]),
+                torch.zeros_like(pd_scores[..., 0]).bool(),  # ⭐ 补这个
             )
 
         try:
@@ -99,22 +100,20 @@ class TaskAlignedAssigner(nn.Module):
         Returns:
             target_labels, target_bboxes, target_scores, fg_mask, target_gt_idx
         """
-        # --------------------------
-        # 1️⃣ 处理 ignore gt
-        # 假设 ignore gt 的标签 < 0，例如 -1
-        # =========================================================
-        # 1️⃣ IGNORE GT HANDLING (-1 label)
-        # =========================================================
+        # =========================
+        # 1️⃣ ignore GT 处理
+        # =========================
         ignore_mask_gt = (gt_labels < 0)
+
         mask_gt = mask_gt.clone()
         mask_gt[ignore_mask_gt] = 0
-        # ⭐⭐⭐ CRITICAL FIX
-        gt_labels = gt_labels.clone()
-        gt_labels[gt_labels < 0] = 0
 
-        # =========================================================
-        # 2️⃣ POSITIVE MATCHING
-        # =========================================================
+        gt_labels = gt_labels.clone()
+        gt_labels[gt_labels < 0] = 0  # 防止 index 错误
+
+        # =========================
+        # 2️⃣ 正样本匹配
+        # =========================
         mask_pos, align_metric, overlaps = self.get_pos_mask(
             pd_scores, pd_bboxes, gt_labels, gt_bboxes, anc_points, mask_gt
         )
@@ -123,38 +122,38 @@ class TaskAlignedAssigner(nn.Module):
             mask_pos, overlaps, self.n_max_boxes
         )
 
-        # =========================================================
-        # 3️⃣ TARGET GENERATION
-        # =========================================================
+        # =========================
+        # 3️⃣ target 构建
+        # =========================
         target_labels, target_bboxes, target_scores = self.get_targets(
             gt_labels, gt_bboxes, target_gt_idx, fg_mask
         )
 
-        # =========================================================
-        # 4️⃣ ALIGNMENT NORMALIZATION
-        # =========================================================
-        align_metric *= mask_pos
-        pos_align_metrics = align_metric.amax(dim=-1, keepdim=True)
-        pos_overlaps = (overlaps * mask_pos).amax(dim=-1, keepdim=True)
+        # =========================
+        # 4️⃣ 对齐归一化
+        # =========================
+        align_metric = align_metric * mask_pos
 
-        norm_align_metric = (
-                align_metric * pos_overlaps / (pos_align_metrics + self.eps)
-        ).amax(-2).unsqueeze(-1)
+        pos_align = align_metric.amax(dim=-1, keepdim=True)
+        pos_iou = (overlaps * mask_pos).amax(dim=-1, keepdim=True)
 
-        target_scores = target_scores * norm_align_metric
+        norm_align = (align_metric * pos_iou / (pos_align + self.eps)).amax(-2).unsqueeze(-1)
 
-        # =========================================================
-        # 5️⃣ 🔥 IGNORE REGION (KEY FOR PARTIAL LABELING)
-        # =========================================================
-        # anchors that have high IoU with ANY gt but are NOT assigned
-        max_iou_per_anchor = overlaps.max(dim=1)[0]  # (bs, anchors)
+        target_scores = target_scores * norm_align
+
+        # =========================
+        # 5️⃣ IGNORE REGION（关键修复）
+        # =========================
+        # 只考虑 valid gt
+        valid_overlaps = overlaps * mask_gt
+
+        max_iou_per_anchor = valid_overlaps.max(dim=1)[0]  # (bs, anchors)
+
         unmatched_mask = (fg_mask == 0)
 
         ignore_region = (max_iou_per_anchor > self.ignore_iou_thr) & unmatched_mask
-        ignore_region = ignore_region.bool()
 
-        # self.ignore_mask = ignore_region
-        return target_labels, target_bboxes, target_scores, fg_mask.bool(), target_gt_idx, ignore_region
+        return target_labels, target_bboxes, target_scores, fg_mask.bool(), target_gt_idx, ignore_region.bool()
 
     def get_pos_mask(self, pd_scores, pd_bboxes, gt_labels, gt_bboxes, anc_points, mask_gt):
             """Get positive mask for each ground truth box.
@@ -173,11 +172,17 @@ class TaskAlignedAssigner(nn.Module):
                 overlaps (torch.Tensor): Overlaps between predicted vs ground truth boxes with shape (bs, max_num_obj, h*w).
             """
             mask_in_gts = self.select_candidates_in_gts(anc_points, gt_bboxes)
-            # Get anchor_align metric, (b, max_num_obj, h*w)
-            align_metric, overlaps = self.get_box_metrics(pd_scores, pd_bboxes, gt_labels, gt_bboxes, mask_in_gts * mask_gt)
-            # Get topk_metric mask, (b, max_num_obj, h*w)
-            mask_topk = self.select_topk_candidates(align_metric, topk_mask=mask_gt.expand(-1, -1, self.topk).bool())
-            # Merge all mask to a final mask, (b, max_num_obj, h*w)
+
+            align_metric, overlaps = self.get_box_metrics(
+                pd_scores, pd_bboxes, gt_labels, gt_bboxes, mask_in_gts * mask_gt
+            )
+
+            # ⭐ 修复：不使用错误 topk_mask
+            # mask_topk = self.select_topk_candidates(align_metric)
+            mask_topk = self.select_topk_candidates(
+                align_metric * mask_gt  # ⭐ 防止无效GT进入topk
+            )
+
             mask_pos = mask_topk * mask_in_gts * mask_gt
 
             return mask_pos, align_metric, overlaps
@@ -197,22 +202,41 @@ class TaskAlignedAssigner(nn.Module):
             overlaps (torch.Tensor): IoU overlaps between predicted and ground truth boxes.
         """
         na = pd_bboxes.shape[-2]
-        mask_gt = mask_gt.bool()  # b, max_num_obj, h*w
-        overlaps = torch.zeros([self.bs, self.n_max_boxes, na], dtype=pd_bboxes.dtype, device=pd_bboxes.device)
-        bbox_scores = torch.zeros([self.bs, self.n_max_boxes, na], dtype=pd_scores.dtype, device=pd_scores.device)
+        mask_gt = mask_gt.bool()
 
-        ind = torch.zeros([2, self.bs, self.n_max_boxes], dtype=torch.long)  # 2, b, max_num_obj
-        ind[0] = torch.arange(end=self.bs).view(-1, 1).expand(-1, self.n_max_boxes)  # b, max_num_obj
-        ind[1] = gt_labels.squeeze(-1)  # b, max_num_obj
-        # Get the scores of each grid for each gt cls
-        bbox_scores[mask_gt] = pd_scores[ind[0], :, ind[1]][mask_gt]  # b, max_num_obj, h*w
+        overlaps = torch.zeros(
+            [self.bs, self.n_max_boxes, na],
+            dtype=pd_bboxes.dtype,
+            device=pd_bboxes.device,
+        )
 
-        # (b, max_num_obj, 1, 4), (b, 1, h*w, 4)
-        pd_boxes = pd_bboxes.unsqueeze(1).expand(-1, self.n_max_boxes, -1, -1)[mask_gt]
-        gt_boxes = gt_bboxes.unsqueeze(2).expand(-1, -1, na, -1)[mask_gt]
-        overlaps[mask_gt] = self.iou_calculation(gt_boxes, pd_boxes)
+        bbox_scores = torch.zeros(
+            [self.bs, self.n_max_boxes, na],
+            dtype=pd_scores.dtype,
+            device=pd_scores.device,
+        )
 
-        align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
+        ind = torch.zeros([2, self.bs, self.n_max_boxes], dtype=torch.long)
+        ind[0] = torch.arange(self.bs).view(-1, 1).expand(-1, self.n_max_boxes)
+        ind[1] = gt_labels.squeeze(-1)
+
+        # ⭐ 修复：避免 ignore 污染
+        valid_gt_mask = mask_gt
+
+        # bbox_scores[valid_gt_mask] = pd_scores[ind[0], :, ind[1]][valid_gt_mask]
+        gt_labels_safe = gt_labels.clone()
+        gt_labels_safe[mask_gt == 0] = 0  # 只对 valid 生效
+        bbox_scores[mask_gt] = pd_scores[ind[0], :, gt_labels_safe.squeeze(-1)][mask_gt]
+
+        pd_boxes = pd_bboxes.unsqueeze(1).expand(-1, self.n_max_boxes, -1, -1)[valid_gt_mask]
+        gt_boxes = gt_bboxes.unsqueeze(2).expand(-1, -1, na, -1)[valid_gt_mask]
+
+        overlaps[valid_gt_mask] = self.iou_calculation(gt_boxes, pd_boxes)
+
+        # align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
+        align_metric = (bbox_scores.clamp(min=1e-6).pow(self.alpha) *
+                        overlaps.clamp(min=1e-6).pow(self.beta))
+
         return align_metric, overlaps
 
     def iou_calculation(self, gt_bboxes, pd_bboxes):
@@ -289,9 +313,9 @@ class TaskAlignedAssigner(nn.Module):
         # 10x faster than F.one_hot()
         target_scores = torch.zeros(
             (target_labels.shape[0], target_labels.shape[1], self.num_classes),
-            dtype=torch.int64,
+            dtype=torch.float32,  # ⭐ 必须改
             device=target_labels.device,
-        )  # (b, h*w, 80)
+        )
         target_scores.scatter_(2, target_labels.unsqueeze(-1), 1)
 
         fg_scores_mask = fg_mask[:, :, None].repeat(1, 1, self.num_classes)  # (b, h*w, 80)

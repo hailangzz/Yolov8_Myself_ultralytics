@@ -191,7 +191,7 @@ class KeypointLoss(nn.Module):
 
 
 class v8DetectionLoss:
-    """YOLOv8 detection loss (dataset-aware + ignore + soft-neg)"""
+    """YOLOv8 detection loss (industrial multi-dataset clean version)"""
 
     def __init__(self, model, tal_topk: int = 10):
         device = next(model.parameters()).device
@@ -217,8 +217,6 @@ class v8DetectionLoss:
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
 
     # ------------------------
-    # preprocess
-    # ------------------------
     def preprocess(self, targets, batch_size, scale_tensor):
         nl, ne = targets.shape
         if nl == 0:
@@ -239,8 +237,6 @@ class v8DetectionLoss:
         return out
 
     # ------------------------
-    # decode bbox
-    # ------------------------
     def bbox_decode(self, anchor_points, pred_dist):
         if self.use_dfl:
             b, a, c = pred_dist.shape
@@ -252,11 +248,9 @@ class v8DetectionLoss:
         return dist2bbox(pred_dist, anchor_points, xywh=False)
 
     # ------------------------
-    # MAIN
-    # ------------------------
     def __call__(self, preds, batch):
 
-        loss = torch.zeros(3, device=self.device)  # box, cls, dfl
+        loss = torch.zeros(3, device=self.device)
         feats = preds[1] if isinstance(preds, tuple) else preds
 
         # ------------------------
@@ -282,32 +276,46 @@ class v8DetectionLoss:
         # targets
         # ------------------------
         targets = torch.cat(
-            (batch["batch_idx"].view(-1, 1),
-             batch["cls"].view(-1, 1),
-             batch["bboxes"]),
+            (
+                batch["batch_idx"].view(-1, 1),
+                batch["cls"].view(-1, 1),
+                batch["bboxes"],
+            ),
             1,
         )
 
         targets = self.preprocess(
-            targets, B, scale_tensor=imgsz[[1, 0, 1, 0]]
+            targets,
+            B,
+            scale_tensor=imgsz[[1, 0, 1, 0]],
         )
 
         gt_labels, gt_bboxes = targets.split((1, 4), 2)
 
-        # mask
+        # GT mask
         valid_mask = (gt_labels >= 0).float()
         mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0).float()
         mask_gt = mask_gt * valid_mask
 
         # ------------------------
-        # decode bbox
+        # decode
         # ------------------------
         pred_bboxes = self.bbox_decode(anchor_points, pred_distri)
 
-        # ------------------------
-        # assign
-        # ------------------------
+        # =========================================================
+        # DATASET CLASS MASK
+        # =========================================================
+        if "dataset_class_mask" in batch:
+            dcm = batch["dataset_class_mask"].to(self.device).float()
+        else:
+            dcm = torch.ones((B, C), device=self.device)
+
+        # =========================================================
+        # ASSIGNER (dataset-aware)
+        # =========================================================
         with torch.no_grad():
+            assign_scores = pred_scores.detach().sigmoid() * dcm.unsqueeze(1)
+
             (
                 _,
                 target_bboxes,
@@ -316,8 +324,8 @@ class v8DetectionLoss:
                 target_gt_idx,
                 ignore_region,
             ) = self.assigner(
-                pred_scores.sigmoid(),
-                pred_bboxes * stride_tensor,
+                assign_scores,
+                pred_bboxes.detach() * stride_tensor,
                 anchor_points * stride_tensor,
                 gt_labels,
                 gt_bboxes,
@@ -325,72 +333,80 @@ class v8DetectionLoss:
             )
 
         # =========================================================
-        # 🔥 1. DATASET-AWARE CLASS MASK
+        # IGNORE UNKNOWN CLASS
         # =========================================================
-        class_mask = torch.ones_like(pred_scores)
+        dcm_expand = dcm.unsqueeze(1).expand(-1, N, -1)
 
-        if "dataset_class_mask" in batch:
-            dcm = batch["dataset_class_mask"].to(self.device)  # (B, C)
-            dcm = dcm.unsqueeze(1).repeat(1, N, 1)
-            class_mask = class_mask * dcm
+        target_scores = target_scores.clone()
+        target_scores[dcm_expand == 0] = -1
+
+        valid_mask_cls = (target_scores >= 0).float()
+        target_scores = target_scores.clamp(min=0)
 
         # =========================================================
-        # 🔥 2. SOFT NEGATIVE SUPPRESSION
+        # SOFT NEGATIVE
         # =========================================================
-        pos_mask = fg_mask.unsqueeze(-1)
-
         with torch.no_grad():
-            neg_weight = pred_scores.sigmoid()
-            neg_weight = neg_weight.clamp(0.05, 0.5)
+            neg_weight = pred_scores.sigmoid().clamp(0.05, 0.5)
 
-        neg_mask = (~fg_mask & ~ignore_region).unsqueeze(-1) * neg_weight
+        neg_mask = (~fg_mask & ~ignore_region).unsqueeze(-1).float()
+        neg_mask = neg_mask * dcm.unsqueeze(1)
+        neg_mask = neg_mask * neg_weight
 
-        final_cls_mask = (pos_mask + neg_mask) * class_mask
+        pos_mask = fg_mask.unsqueeze(-1).float()
+
+        final_cls_mask = torch.clamp(pos_mask + neg_mask, max=1.0)
 
         # ------------------------
         # cls loss
         # ------------------------
-        loss_cls = self.bce(pred_scores, target_scores.to(dtype)) * final_cls_mask
-        loss[1] = loss_cls.sum() / (final_cls_mask.sum() + 1e-6)
+        loss_cls = self.bce(
+            pred_scores,
+            target_scores.to(dtype)
+        )
+
+        loss_cls = loss_cls * final_cls_mask * valid_mask_cls
+
+        loss[1] = loss_cls.sum() / (valid_mask_cls.sum() + 1e-6)
 
         # =========================================================
-        # 🔥 3. DATASET-AWARE FG MASK (bbox)
+        # FG MASK REFINE
         # =========================================================
-        if "dataset_class_mask" in batch:
-            dcm = batch["dataset_class_mask"].to(self.device)
+        gt_cls = gt_labels.long().squeeze(-1)
+        gt_cls = torch.where(
+            gt_cls < 0,
+            torch.zeros_like(gt_cls),
+            gt_cls
+        )
 
-            gt_cls = gt_labels.long().squeeze(-1).clamp(min=0)  # (B, max_gt)
-            valid_gt = torch.gather(dcm, 1, gt_cls)  # (B, max_gt)
+        valid_gt = torch.gather(dcm, 1, gt_cls)
 
-            assigned_gt = target_gt_idx.clamp(min=0)
+        assigned_gt = target_gt_idx.clamp(min=0)
 
-            valid_assign = torch.gather(
-                valid_gt.unsqueeze(1).repeat(1, N, 1),
-                2,
-                assigned_gt.unsqueeze(-1),
-            ).squeeze(-1)
+        valid_assign = torch.gather(
+            valid_gt.unsqueeze(1).expand(-1, N, -1),
+            2,
+            assigned_gt.unsqueeze(-1),
+        ).squeeze(-1)
 
-            fg_mask = fg_mask & valid_assign.bool()
+        fg_mask = fg_mask & valid_assign.bool()
 
         # ------------------------
         # bbox loss
         # ------------------------
         if fg_mask.sum():
-            loss_box, loss_dfl = self.bbox_loss(
+            target_scores_pos = target_scores.clamp(min=0)
+            target_scores_sum = target_scores_pos.sum().clamp(min=1)
+
+            loss[0], loss[2] = self.bbox_loss(
                 pred_distri,
                 pred_bboxes,
                 anchor_points,
                 target_bboxes / stride_tensor,
-                target_scores,
-                target_scores.sum().clamp(min=1),
+                target_scores_pos,
+                target_scores_sum,
                 fg_mask,
             )
-
-            valid_pos = (target_scores.sum(-1) > 0)
-            num_pos = valid_pos.sum().clamp(min=1)
-
-            loss[0] = loss_box * (num_pos / (fg_mask.sum() + 1e-6))
-            loss[2] = loss_dfl * (num_pos / (fg_mask.sum() + 1e-6))
 
         # ------------------------
         # weight
@@ -400,217 +416,6 @@ class v8DetectionLoss:
         loss[2] *= self.hyp.dfl
 
         return loss * B, loss.detach()
-
-
-class v8DetectionLoss:
-    """YOLOv8 detection loss (stable + dataset-aware + soft-neg improved)"""
-
-    def __init__(self, model, tal_topk: int = 10):
-        device = next(model.parameters()).device
-        h = model.args
-
-        m = model.model[-1]
-        self.device = device
-        self.hyp = h
-        self.bce = nn.BCEWithLogitsLoss(reduction="none")
-
-        self.stride = m.stride
-        self.nc = m.nc
-        self.no = m.nc + m.reg_max * 4
-        self.reg_max = m.reg_max
-
-        self.use_dfl = m.reg_max > 1
-
-        self.assigner = TaskAlignedAssigner(
-            topk=tal_topk, num_classes=self.nc, alpha=0.5, beta=6.0
-        )
-
-        self.bbox_loss = BboxLoss(m.reg_max).to(device)
-        self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
-
-    # ------------------------
-    # preprocess
-    # ------------------------
-    def preprocess(self, targets, batch_size, scale_tensor):
-        nl, ne = targets.shape
-        if nl == 0:
-            out = torch.zeros(batch_size, 0, ne - 1, device=self.device)
-        else:
-            i = targets[:, 0]
-            _, counts = i.unique(return_counts=True)
-            counts = counts.to(dtype=torch.int32)
-
-            out = torch.zeros(batch_size, counts.max(), ne - 1, device=self.device)
-            for j in range(batch_size):
-                matches = i == j
-                if n := matches.sum():
-                    out[j, :n] = targets[matches, 1:]
-
-            out[..., 1:5] = xywh2xyxy(out[..., 1:5].mul_(scale_tensor))
-
-        return out
-
-    # ------------------------
-    # decode bbox
-    # ------------------------
-    def bbox_decode(self, anchor_points, pred_dist):
-        if self.use_dfl:
-            b, a, c = pred_dist.shape
-            pred_dist = (
-                pred_dist.view(b, a, 4, c // 4)
-                .softmax(3)
-                .matmul(self.proj.type(pred_dist.dtype))
-            )
-        return dist2bbox(pred_dist, anchor_points, xywh=False)
-
-    # ------------------------
-    # MAIN
-    # ------------------------
-    def __call__(self, preds, batch):
-
-        loss = torch.zeros(3, device=self.device)  # box, cls, dfl
-        feats = preds[1] if isinstance(preds, tuple) else preds
-
-        # ------------------------
-        # prediction
-        # ------------------------
-        pred_distri, pred_scores = torch.cat(
-            [xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2
-        ).split((self.reg_max * 4, self.nc), 1)
-
-        pred_scores = pred_scores.permute(0, 2, 1).contiguous()
-        pred_distri = pred_distri.permute(0, 2, 1).contiguous()
-
-        dtype = pred_scores.dtype
-        B, N, C = pred_scores.shape
-
-        imgsz = torch.tensor(
-            feats[0].shape[2:], device=self.device, dtype=dtype
-        ) * self.stride[0]
-
-        anchor_points, stride_tensor = make_anchors(feats, self.stride, 0.5)
-
-        # ------------------------
-        # targets
-        # ------------------------
-        targets = torch.cat(
-            (batch["batch_idx"].view(-1, 1),
-             batch["cls"].view(-1, 1),
-             batch["bboxes"]),
-            1,
-        )
-
-        targets = self.preprocess(
-            targets, B, scale_tensor=imgsz[[1, 0, 1, 0]]
-        )
-
-        gt_labels, gt_bboxes = targets.split((1, 4), 2)
-
-        valid_mask = (gt_labels >= 0).float()
-        mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0).float()
-        mask_gt = mask_gt * valid_mask
-
-        # ------------------------
-        # decode bbox
-        # ------------------------
-        pred_bboxes = self.bbox_decode(anchor_points, pred_distri)
-
-        # ------------------------
-        # assign
-        # ------------------------
-        with torch.no_grad():
-            (
-                _,
-                target_bboxes,
-                target_scores,
-                fg_mask,
-                target_gt_idx,
-                ignore_region,
-            ) = self.assigner(
-                pred_scores.sigmoid(),
-                pred_bboxes * stride_tensor,
-                anchor_points * stride_tensor,
-                gt_labels,
-                gt_bboxes,
-                mask_gt,
-            )
-
-        # =========================================================
-        # ✅ 1. DATASET-AWARE CLASS MASK（平滑版）
-        # =========================================================
-        class_mask = torch.ones_like(pred_scores)
-
-        if "dataset_class_mask" in batch:
-            dcm = batch["dataset_class_mask"].to(self.device)  # (B, C)
-            dcm = dcm.unsqueeze(1).repeat(1, N, 1)
-            class_mask = 0.5 + 0.5 * dcm  # ⭐ 平滑避免梯度断裂
-
-        # =========================================================
-        # ✅ 2. SOFT NEGATIVE（改进版）
-        # =========================================================
-        pos_mask = fg_mask.unsqueeze(-1).float()
-
-        with torch.no_grad():
-            neg_weight = pred_scores.sigmoid().pow(2)  # ⭐ 更合理
-
-        neg_base = (~fg_mask & ~ignore_region).float()
-        neg_mask = neg_base.unsqueeze(-1) * neg_weight
-
-        final_cls_mask = (pos_mask + neg_mask) * class_mask
-
-        # ------------------------
-        # cls loss
-        # ------------------------
-        loss_cls = self.bce(pred_scores, target_scores.to(dtype)) * final_cls_mask
-        loss[1] = loss_cls.sum() / (final_cls_mask.sum() + 1e-6)
-
-        # =========================================================
-        # ✅ 3. DATASET-AWARE FG MASK（安全版）
-        # =========================================================
-        if "dataset_class_mask" in batch:
-            dcm = batch["dataset_class_mask"].to(self.device)
-
-            gt_cls = gt_labels.long().squeeze(-1).clamp(min=0)
-            valid_gt = torch.gather(dcm, 1, gt_cls)
-
-            assigned_gt = target_gt_idx.clamp(
-                min=0, max=valid_gt.shape[1] - 1
-            )
-
-            valid_assign = torch.gather(
-                valid_gt.unsqueeze(1).repeat(1, N, 1),
-                2,
-                assigned_gt.unsqueeze(-1),
-            ).squeeze(-1)
-
-            fg_mask = fg_mask & valid_assign.bool()
-
-        # ------------------------
-        # bbox loss（稳定版）
-        # ------------------------
-        if fg_mask.sum():
-            loss_box, loss_dfl = self.bbox_loss(
-                pred_distri,
-                pred_bboxes,
-                anchor_points,
-                target_bboxes / stride_tensor,
-                target_scores,
-                target_scores.sum() + 1e-6,  # ⭐ 修复
-                fg_mask,
-            )
-
-            loss[0] = loss_box
-            loss[2] = loss_dfl
-
-        # ------------------------
-        # weight
-        # ------------------------
-        loss[0] *= self.hyp.box
-        loss[1] *= self.hyp.cls
-        loss[2] *= self.hyp.dfl
-
-        return loss * B, loss.detach()
-
 
 class v8PoseLoss(v8DetectionLoss):
     """Criterion class for computing training losses for YOLOv8 pose estimation."""
