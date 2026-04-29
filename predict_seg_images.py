@@ -164,6 +164,9 @@ if __name__ == "__main__":
 
         #python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune/weights/best.pt  --imgs_dir /data/database/AITotal_Segment_ValDatabase/public_real_camera_images_0422_carpet_val_batch1  --save_dir ./results/carpet  --conf 0.55
 
+        #4月17
+        #python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune2/weights/best.pt --imgs_dir /home/chenkejing/Downloads/images/images  --save_dir ./results/carpet  --conf 0.55
+
 
 
     # 线材检测
