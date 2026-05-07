@@ -21,42 +21,41 @@
 
 # ⭐ 全局类别（统一空间）
 names:
-  0: wire
-  1: cable
-  2: connector
+  0: carpet
+  1: wire
 
 multi_datasets:
 
-  - name: wire_A
+  - name: carpet_0
     id: 0   # ⭐ 必加（对应 database_id）
     weight: 1.0
-    train: /home/chenkejing/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/train
-    val: /home/chenkejing/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/val
+    train: /home/chenkejing/database/AITotal_ProjectDatabase/carpetDatabaseProgrem/images/train
+    val: /home/chenkejing/database/AITotal_ProjectDatabase/carpetDatabaseProgrem/images/test
+
+    data:
+      names:
+        0: carpet
+
+      class_map:
+        0: 0
+
+      # ⭐ 新增：class_mask（核心）
+      class_mask: [1, 0]
+
+
+  - name: wire_1
+    id: 1
+    weight: 5.0
+
+    train: /home/chenkejing/database/AITotal_ProjectDatabase/WireDetectProgrem/images/train
+    val: /home/chenkejing/database/AITotal_ProjectDatabase/WireDetectProgrem/images/test
 
     data:
       names:
         0: wire
 
       class_map:
-        0: 0
-
-      # ⭐ 新增：class_mask（核心）
-      class_mask: [1, 0, 0]
-
-
-  - name: wire_B
-    id: 1
-    weight: 5.0
-
-    train: /home/chenkejing/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/train
-    val: /home/chenkejing/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/val
-
-    data:
-      names:
-        0: cable
-
-      class_map:
         0: 1
 
       # ⭐ 新增
-      class_mask: [0, 1, 0]
+      class_mask: [0, 1]
