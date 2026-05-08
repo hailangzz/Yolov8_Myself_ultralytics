@@ -411,11 +411,18 @@ def check_det_dataset(dataset: str, autodownload: bool = True) -> dict[str, Any]
     data = YAML.load(file, append_filename=True)  # dictionary
 
     # Checks
-    for k in "train", "val":
-        if k not in data:
-            if k != "val" or "validation" not in data:
+    # for k in "train", "val":
+    #     if k not in data:
+    #         if k != "val" or "validation" not in data:
+    #             raise SyntaxError(
+    #                 emojis(f"{dataset} '{k}:' key missing ❌.\n'train' and 'val' are required in all data YAMLs.")
+    #             )
+    if "multi_datasets" not in data:
+        for k in "train", "val":
+            if k not in data:
                 raise SyntaxError(
-                    emojis(f"{dataset} '{k}:' key missing ❌.\n'train' and 'val' are required in all data YAMLs.")
+                    emojis(f"{dataset} '{k}:' key missing ❌.\n"
+                           f"'train' and 'val' are required in all data YAMLs.")
                 )
             LOGGER.warning("renaming data YAML 'validation' key to 'val' to match YOLO format.")
             data["val"] = data.pop("validation")  # replace 'validation' key with 'val' key

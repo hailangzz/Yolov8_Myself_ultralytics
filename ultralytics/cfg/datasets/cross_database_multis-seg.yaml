@@ -20,9 +20,14 @@
 #  0: wire
 
 # ⭐ 全局类别（统一空间）
+
+nc: 2   # 或你真实类别数
 names:
   0: carpet
   1: wire
+
+train: dummy
+val: dummy
 
 multi_datasets:
 

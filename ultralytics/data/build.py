@@ -381,6 +381,17 @@ def build_dataloader(
         if rank != -1 and shuffle:
             sampler = DistributedSampler(dataset, shuffle=True)
 
+    # return InfiniteDataLoader(
+    #     dataset=dataset,
+    #     batch_size=batch,
+    #     shuffle=(sampler is None and shuffle),
+    #     num_workers=nw,
+    #     sampler=sampler,
+    #     pin_memory=nd > 0 and pin_memory,
+    #     collate_fn=getattr(dataset, "collate_fn", None),
+    #     worker_init_fn=seed_worker,
+    #     drop_last=drop_last,
+    # )
     return InfiniteDataLoader(
         dataset=dataset,
         batch_size=batch,
@@ -388,7 +399,7 @@ def build_dataloader(
         num_workers=nw,
         sampler=sampler,
         pin_memory=nd > 0 and pin_memory,
-        collate_fn=getattr(dataset, "collate_fn", None),
+        collate_fn=dataset.collate_fn if hasattr(dataset, "collate_fn") else YOLODataset.collate_fn,
         worker_init_fn=seed_worker,
         drop_last=drop_last,
     )

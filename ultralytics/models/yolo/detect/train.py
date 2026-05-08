@@ -335,3 +335,34 @@ class DetectionTrainer(BaseTrainer):
         max_num_obj = max(len(label["cls"]) for label in train_dataset.labels) * 4  # 4 for mosaic augmentation
         del train_dataset  # free memory
         return super().auto_batch(max_num_obj)
+
+    def get_dataset(self):
+
+        from ultralytics.utils import YAML
+        from ultralytics.data.utils import check_det_dataset
+
+        # load raw yaml
+        data = YAML.load(self.args.data)
+
+        # =========================
+        # ⭐ MULTI DATASET MODE
+        # =========================
+        if isinstance(data, dict) and "multi_datasets" in data:
+            LOGGER.info("Using multi-dataset training mode")
+
+            # ===== build fake compatibility keys =====
+            data["train"] = "multi_train"
+            data["val"] = "multi_val"
+
+            # ===== global nc =====
+            data["nc"] = len(data["names"])
+
+            # ===== channels =====
+            data["channels"] = 3
+
+            return data
+
+        # =========================
+        # fallback official logic
+        # =========================
+        return check_det_dataset(self.args.data)

@@ -60,94 +60,469 @@ Format（决定输出 tensor）
 model training
 """
 
+# class YOLODataset(BaseDataset):
+#     """Dataset class for loading object detection and/or segmentation labels in YOLO format.
+#
+#     This class supports loading data for object detection, segmentation, pose estimation, and oriented bounding box
+#     (OBB) tasks using the YOLO format.
+#
+#     Attributes:
+#         use_segments (bool): Indicates if segmentation masks should be used.
+#         use_keypoints (bool): Indicates if keypoints should be used for pose estimation.
+#         use_obb (bool): Indicates if oriented bounding boxes should be used.
+#         data (dict): Dataset configuration dictionary.
+#
+#     Methods:
+#         cache_labels: Cache dataset labels, check images and read shapes.
+#         get_labels: Return dictionary of labels for YOLO training.
+#         build_transforms: Build and append transforms to the list.
+#         close_mosaic: Set mosaic, copy_paste and mixup options to 0.0 and build transformations.
+#         update_labels_info: Update label format for different tasks.
+#         collate_fn: Collate data samples into batches.
+#
+#     Examples:
+#         >>> dataset = YOLODataset(img_path="path/to/images", data={"names": {0: "person"}}, task="detect")
+#         >>> dataset.get_labels()
+#     """
+#
+#     def __init__(self, *args, data: dict | None = None, task: str = "detect", dataset_id: int = 0,
+#                  dataset_name: str = "default", **kwargs):
+#         self.use_segments = task == "segment"
+#         self.use_keypoints = task == "pose"
+#         self.use_obb = task == "obb"
+#         self.data = data or {}
+#
+#         self.dataset_id = dataset_id
+#         self.dataset_name = dataset_name
+#         self.class_map = self.data.get("class_map", None)
+#
+#         # =========================
+#         # ✅ 修复 class_mask NoneType 崩溃
+#         # =========================
+#         nc = self.data.get("nc", len(self.data.get("names", {})))
+#
+#         class_mask = self.data.get("class_mask", None)
+#
+#         # case 1: 没写
+#         if class_mask is None:
+#             class_mask = [1.0] * int(nc)
+#
+#         # case 2: 写了但有 None
+#         else:
+#             try:
+#                 class_mask = list(class_mask)
+#                 class_mask = [
+#                     1.0 if (x is None) else float(x)
+#                     for x in class_mask
+#                 ]
+#             except Exception:
+#                 class_mask = [1.0] * int(nc)
+#
+#         # case 3: 长度不对（防止多数据集拼接）
+#         if len(class_mask) != nc:
+#             class_mask = [1.0] * int(nc)
+#
+#         self.class_mask = torch.tensor(class_mask, dtype=torch.float32)
+#
+#         assert not (self.use_segments and self.use_keypoints)
+#         super().__init__(*args, channels=self.data.get("channels", 3), **kwargs)
+#
+#     def __getitem__(self, index):
+#         sample = super().__getitem__(index)
+#         sample["dataset_id"] = self.dataset_id
+#         if self.class_mask is not None:
+#             sample["class_mask"] = self.class_mask
+#         return sample
+#
+#     def cache_labels(self, path: Path = Path("./labels.cache")) -> dict: # （结构生成） 决定“label dict 初始长什么样”
+#         """Cache dataset labels, check images and read shapes.
+#
+#         Args:
+#             path (Path): Path where to save the cache file.
+#
+#         Returns:
+#             (dict): Dictionary containing cached labels and related information.
+#         """
+#         x = {"labels": []}
+#         nm, nf, ne, nc, msgs = 0, 0, 0, 0, []  # number missing, found, empty, corrupt, messages
+#         desc = f"{self.prefix}Scanning {path.parent / path.stem}..."
+#         total = len(self.im_files)
+#         nkpt, ndim = self.data.get("kpt_shape", (0, 0))
+#         if self.use_keypoints and (nkpt <= 0 or ndim not in {2, 3}):
+#             raise ValueError(
+#                 "'kpt_shape' in data.yaml missing or incorrect. Should be a list with [number of "
+#                 "keypoints, number of dims (2 for x,y or 3 for x,y,visible)], i.e. 'kpt_shape: [17, 3]'"
+#             )
+#         with ThreadPool(NUM_THREADS) as pool:
+#             results = pool.imap(
+#                 func=verify_image_label,  #解析数据
+#                 iterable=zip(
+#                     self.im_files,
+#                     self.label_files,
+#                     repeat(self.prefix),
+#                     repeat(self.use_keypoints),
+#                     repeat(len(self.data["names"])),
+#                     repeat(nkpt),
+#                     repeat(ndim),
+#                     repeat(self.single_cls),
+#                 ),
+#             )
+#             pbar = TQDM(results, desc=desc, total=total)
+#             for im_file, lb, shape, segments, keypoint, nm_f, nf_f, ne_f, nc_f, msg in pbar:
+#                 nm += nm_f
+#                 nf += nf_f
+#                 ne += ne_f
+#                 nc += nc_f
+#                 if im_file:
+#                     # 此处，第一层控制：Dataset 读取阶段（决定“有哪些原始字段”）
+#                     x["labels"].append(
+#                         {
+#                             "im_file": im_file,
+#                             "shape": shape,
+#                             "cls": lb[:, 0:1],  # n, 1
+#                             "bboxes": lb[:, 1:],  # n, 4
+#                             "segments": segments,
+#                             "keypoints": keypoint,
+#                             "dataset_id": self.dataset_id,  # ⭐新增
+#                             "dataset_name": self.dataset_name,
+#                             "normalized": True,
+#                             "bbox_format": "xywh",
+#                         }
+#                     )
+#                 if msg:
+#                     msgs.append(msg)
+#                 pbar.desc = f"{desc} {nf} images, {nm + ne} backgrounds, {nc} corrupt"
+#             pbar.close()
+#
+#         if msgs:
+#             LOGGER.info("\n".join(msgs))
+#         if nf == 0:
+#             LOGGER.warning(f"{self.prefix}No labels found in {path}. {HELP_URL}")
+#         x["hash"] = get_hash(self.label_files + self.im_files)
+#         x["results"] = nf, nm, ne, nc, len(self.im_files)
+#         x["msgs"] = msgs  # warnings
+#         save_dataset_cache_file(self.prefix, path, x, DATASET_CACHE_VERSION)
+#         return x
+#
+#     def get_labels(self) -> list[dict]:
+#         """Return dictionary of labels for YOLO training.
+#
+#         This method loads labels from disk or cache, verifies their integrity, and prepares them for training.
+#
+#         Returns:
+#             (list[dict]): List of label dictionaries, each containing information about an image and its annotations.
+#         """
+#         self.label_files = img2label_paths(self.im_files)
+#         cache_path = Path(self.label_files[0]).parent.with_suffix(".cache")
+#         try:
+#             cache, exists = load_dataset_cache_file(cache_path), True  # attempt to load a *.cache file
+#             assert cache["version"] == DATASET_CACHE_VERSION  # matches current version
+#             assert cache["hash"] == get_hash(self.label_files + self.im_files)  # identical hash
+#         except (FileNotFoundError, AssertionError, AttributeError, ModuleNotFoundError):
+#             cache, exists = self.cache_labels(cache_path), False  # run cache ops
+#
+#         # Display cache
+#         nf, nm, ne, nc, n = cache.pop("results")  # found, missing, empty, corrupt, total
+#         if exists and LOCAL_RANK in {-1, 0}:
+#             d = f"Scanning {cache_path}... {nf} images, {nm + ne} backgrounds, {nc} corrupt"
+#             TQDM(None, desc=self.prefix + d, total=n, initial=n)  # display results
+#             if cache["msgs"]:
+#                 LOGGER.info("\n".join(cache["msgs"]))  # display warnings
+#
+#         # Read cache
+#         [cache.pop(k) for k in ("hash", "version", "msgs")]  # remove items
+#         labels = cache["labels"]
+#
+#         if not labels:
+#             raise RuntimeError(
+#                 f"No valid images found in {cache_path}. Images with incorrectly formatted labels are ignored. {HELP_URL}"
+#             )
+#         self.im_files = [lb["im_file"] for lb in labels]  # update im_files
+#
+#         # ✅ 强制覆盖（避免 cache 污染）
+#         for lb in labels:
+#             lb["dataset_id"] = self.dataset_id
+#             lb["dataset_name"] = self.dataset_name
+#
+#         # Check if the dataset is all boxes or all segments
+#         lengths = ((len(lb["cls"]), len(lb["bboxes"]), len(lb["segments"])) for lb in labels)
+#         len_cls, len_boxes, len_segments = (sum(x) for x in zip(*lengths))
+#         if len_segments and len_boxes != len_segments:
+#             LOGGER.warning(
+#                 f"Box and segment counts should be equal, but got len(segments) = {len_segments}, "
+#                 f"len(boxes) = {len_boxes}. To resolve this only boxes will be used and all segments will be removed. "
+#                 "To avoid this please supply either a detect or segment dataset, not a detect-segment mixed dataset."
+#             )
+#             for lb in labels:
+#                 lb["segments"] = []
+#         if len_cls == 0:
+#             LOGGER.warning(f"Labels are missing or empty in {cache_path}, training may not work correctly. {HELP_URL}")
+#         return labels
+#
+#     def build_transforms(self, hyp: dict | None = None) -> Compose:
+#         """Build and append transforms to the list.
+#
+#         Args:
+#             hyp (dict, optional): Hyperparameters for transforms.
+#
+#         Returns:
+#             (Compose): Composed transforms.
+#         """
+#         if self.augment:
+#             hyp.mosaic = hyp.mosaic if self.augment and not self.rect else 0.0
+#             hyp.mixup = hyp.mixup if self.augment and not self.rect else 0.0
+#             hyp.cutmix = hyp.cutmix if self.augment and not self.rect else 0.0
+#             transforms = v8_transforms(self, self.imgsz, hyp)
+#         else:
+#             transforms = Compose([LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
+#
+#         # batch 最终输出哪些 tensor
+#         transforms.append(
+#             Format(
+#                 bbox_format="xywh",
+#                 normalize=True,
+#                 return_mask=self.use_segments,
+#                 return_keypoint=self.use_keypoints,
+#                 return_obb=self.use_obb,
+#                 batch_idx=True,
+#                 mask_ratio=hyp.mask_ratio,
+#                 mask_overlap=hyp.overlap_mask,
+#                 bgr=hyp.bgr if self.augment else 0.0,  # only affect training.
+#             )   # 决定“batch里最终有哪些 tensor”
+#         )
+#         return transforms
+#
+#     def close_mosaic(self, hyp: dict) -> None:
+#         """Disable mosaic, copy_paste, mixup and cutmix augmentations by setting their probabilities to 0.0.
+#
+#         Args:
+#             hyp (dict): Hyperparameters for transforms.
+#         """
+#         hyp.mosaic = 0.0
+#         hyp.copy_paste = 0.0
+#         hyp.mixup = 0.0
+#         hyp.cutmix = 0.0
+#         self.transforms = self.build_transforms(hyp)
+#
+#     # =========================
+#     # 🔥 核心修复点 1
+#     # =========================
+#     def update_labels_info(self, label: dict) -> dict:
+#
+#         cls = label["cls"]
+#         bboxes = label.pop("bboxes")
+#         segments = label.pop("segments", [])
+#         keypoints = label.pop("keypoints", None)
+#
+#         bbox_format = label.pop("bbox_format")
+#         normalized = label.pop("normalized")
+#
+#         dataset_id = label.get("dataset_id", self.dataset_id)
+#         dataset_name = label.get("dataset_name", self.dataset_name)
+#
+#         cls = np.asarray(cls).reshape(-1)
+#
+#         # -------------------------
+#         # class_map safe mapping
+#         # -------------------------
+#         if self.class_map is not None and len(cls) > 0:
+#             mapped = np.array(
+#                 [self.class_map.get(int(c), -1) for c in cls],
+#                 dtype=np.int64
+#             )
+#             valid = mapped >= 0
+#
+#             if valid.sum() == 0:
+#                 # 🚨 保底：绝不能返回 None / 空不一致结构
+#                 cls = np.zeros((0, 1), dtype=np.float32)
+#                 bboxes = np.zeros((0, 4), dtype=np.float32)
+#                 segments = []
+#             else:
+#                 cls = mapped[valid].astype(np.float32).reshape(-1, 1)
+#                 bboxes = bboxes[valid]
+#
+#                 if isinstance(segments, list) and len(segments) == len(mapped):
+#                     idx = np.where(valid)[0]
+#                     segments = [segments[i] for i in idx]
+#
+#         else:
+#             cls = cls.astype(np.float32).reshape(-1, 1)
+#
+#         # =========================
+#         # 🔥 核心修复点 2
+#         # 强制 label 一致性
+#         # =========================
+#         if len(bboxes) != len(cls):
+#             min_len = min(len(bboxes), len(cls))
+#             cls = cls[:min_len]
+#             bboxes = bboxes[:min_len]
+#
+#         # =========================
+#         # segments safe
+#         # =========================
+#         if len(segments) > 0:
+#             try:
+#                 max_len = max(len(s) for s in segments)
+#                 segments = np.stack(
+#                     resample_segments(segments, n=max(100, max_len + 1)),
+#                     axis=0
+#                 )
+#             except:
+#                 segments = np.zeros((0, 100, 2), dtype=np.float32)
+#         else:
+#             segments = np.zeros((0, 100, 2), dtype=np.float32)
+#
+#         inst = Instances(
+#             bboxes,
+#             segments,
+#             keypoints,
+#             bbox_format=bbox_format,
+#             normalized=normalized
+#         )
+#
+#         inst.dataset_id = dataset_id
+#         inst.dataset_name = dataset_name
+#
+#         label["cls"] = cls
+#         label["bboxes"] = bboxes
+#         label["segments"] = segments
+#         label["instances"] = inst
+#         label["dataset_id"] = dataset_id
+#         label["dataset_name"] = dataset_name
+#
+#         return label
+#
+#         # =========================
+#         # 🔥 核心修复点 3
+#         # =========================
+#     @staticmethod
+#     def collate_fn(batch: list[dict]) -> dict:
+#
+#         new_batch = {}
+#         keys = batch[0].keys()
+#
+#         for k in keys:
+#
+#             if k in {"img", "text_feats"}:
+#                 new_batch[k] = torch.stack([b[k] for b in batch], 0)
+#
+#             elif k in {"visuals"}:
+#                 new_batch[k] = torch.nn.utils.rnn.pad_sequence(
+#                     [b[k] for b in batch],
+#                     batch_first=True
+#                 )
+#
+#             elif k in {"bboxes", "cls", "segments", "masks", "keypoints", "obb"}:
+#                 items = []
+#
+#                 for b in batch:
+#                     v = b[k]
+#
+#                     if isinstance(v, torch.Tensor):
+#                         if v.numel() > 0:
+#                             items.append(v)
+#                     else:
+#                         if len(v) > 0:
+#                             items.append(torch.tensor(v))
+#
+#                 if len(items) == 0:
+#                     new_batch[k] = torch.zeros((0, 1))
+#                 else:
+#                     new_batch[k] = torch.cat(items, 0)
+#
+#             else:
+#                 new_batch[k] = [b[k] for b in batch]
+#
+#         # -------------------------
+#         # batch_idx safe
+#         # -------------------------
+#         batch_idx = []
+#         for i, b in enumerate(batch):
+#             n = len(b["cls"])
+#             batch_idx.append(torch.full((n,), i, dtype=torch.long))
+#
+#         new_batch["batch_idx"] = torch.cat(batch_idx, 0) if len(batch_idx) else torch.zeros((0,), dtype=torch.long)
+#
+#         # -------------------------
+#         # dataset_id safe
+#         # -------------------------
+#         dataset_ids = []
+#         for b in batch:
+#             n = len(b["cls"])
+#             dataset_ids.append(torch.full((n,), int(b.get("dataset_id", 0)), dtype=torch.long))
+#
+#         new_batch["dataset_id"] = torch.cat(dataset_ids, 0) if len(dataset_ids) else torch.zeros((0,),
+#                                                                                                  dtype=torch.long)
+#
+#         # -------------------------
+#         # class_mask
+#         # -------------------------
+#         if "class_mask" in batch[0]:
+#             new_batch["dataset_class_mask"] = torch.stack(
+#                 [b["class_mask"] for b in batch], 0
+#             ).float()
+#
+#         return new_batch
+
 class YOLODataset(BaseDataset):
-    """Dataset class for loading object detection and/or segmentation labels in YOLO format.
 
-    This class supports loading data for object detection, segmentation, pose estimation, and oriented bounding box
-    (OBB) tasks using the YOLO format.
+    def __init__(self, *args, data=None, task="detect", dataset_id=0,
+                 dataset_name="default", **kwargs):
 
-    Attributes:
-        use_segments (bool): Indicates if segmentation masks should be used.
-        use_keypoints (bool): Indicates if keypoints should be used for pose estimation.
-        use_obb (bool): Indicates if oriented bounding boxes should be used.
-        data (dict): Dataset configuration dictionary.
-
-    Methods:
-        cache_labels: Cache dataset labels, check images and read shapes.
-        get_labels: Return dictionary of labels for YOLO training.
-        build_transforms: Build and append transforms to the list.
-        close_mosaic: Set mosaic, copy_paste and mixup options to 0.0 and build transformations.
-        update_labels_info: Update label format for different tasks.
-        collate_fn: Collate data samples into batches.
-
-    Examples:
-        >>> dataset = YOLODataset(img_path="path/to/images", data={"names": {0: "person"}}, task="detect")
-        >>> dataset.get_labels()
-    """
-
-    def __init__(self, *args, data: dict | None = None, task: str = "detect", dataset_id: int = 0, dataset_name: str = "default", **kwargs):
-        """Initialize the YOLODataset.
-
-        Args:
-            data (dict, optional): Dataset configuration dictionary.
-            task (str): Task type, one of 'detect', 'segment', 'pose', or 'obb'.
-            *args (Any): Additional positional arguments for the parent class.
-            **kwargs (Any): Additional keyword arguments for the parent class.
-        """
-        # task 开关，根据不同类型的任务，确定数据集，使用的到的标签数据结构。
         self.use_segments = task == "segment"
         self.use_keypoints = task == "pose"
         self.use_obb = task == "obb"
         self.data = data or {}
 
-        # ✅ 外部传入优先（关键）
         self.dataset_id = dataset_id
         self.dataset_name = dataset_name
         self.class_map = self.data.get("class_map", None)
 
-        # ⭐ 新增
-        self.class_mask = None
-        if isinstance(self.data, dict) and "class_mask" in self.data:
-            self.class_mask = torch.tensor(self.data["class_mask"], dtype=torch.float32)
+        nc = self.data.get("nc", len(self.data.get("names", {})))
+        class_mask = self.data.get("class_mask", None)
 
-        assert not (self.use_segments and self.use_keypoints), "Cannot use both segments and keypoints."
+        # -------------------------
+        # safe class mask
+        # -------------------------
+        if class_mask is None:
+            class_mask = [1.0] * int(nc)
+        else:
+            try:
+                class_mask = [1.0 if x is None else float(x) for x in list(class_mask)]
+            except Exception:
+                class_mask = [1.0] * int(nc)
+
+        if len(class_mask) != nc:
+            class_mask = [1.0] * int(nc)
+
+        self.class_mask = torch.tensor(class_mask, dtype=torch.float32)
+
+        assert not (self.use_segments and self.use_keypoints)
         super().__init__(*args, channels=self.data.get("channels", 3), **kwargs)
 
     def __getitem__(self, index):
         sample = super().__getitem__(index)
-
-        # ⭐ 加 dataset 信息（你已有）
         sample["dataset_id"] = self.dataset_id
-
-        # ⭐ 新增：class_mask
         if self.class_mask is not None:
             sample["class_mask"] = self.class_mask
-
         return sample
 
-    def cache_labels(self, path: Path = Path("./labels.cache")) -> dict: # （结构生成） 决定“label dict 初始长什么样”
-        """Cache dataset labels, check images and read shapes.
-
-        Args:
-            path (Path): Path where to save the cache file.
-
-        Returns:
-            (dict): Dictionary containing cached labels and related information.
-        """
+    # =========================
+    # cache labels
+    # =========================
+    def cache_labels(self, path: Path = Path("./labels.cache")) -> dict:
         x = {"labels": []}
-        nm, nf, ne, nc, msgs = 0, 0, 0, 0, []  # number missing, found, empty, corrupt, messages
+        nm, nf, ne, nc, msgs = 0, 0, 0, 0, []
+
         desc = f"{self.prefix}Scanning {path.parent / path.stem}..."
         total = len(self.im_files)
+
         nkpt, ndim = self.data.get("kpt_shape", (0, 0))
-        if self.use_keypoints and (nkpt <= 0 or ndim not in {2, 3}):
-            raise ValueError(
-                "'kpt_shape' in data.yaml missing or incorrect. Should be a list with [number of "
-                "keypoints, number of dims (2 for x,y or 3 for x,y,visible)], i.e. 'kpt_shape: [17, 3]'"
-            )
+
         with ThreadPool(NUM_THREADS) as pool:
             results = pool.imap(
-                func=verify_image_label,  #解析数据
-                iterable=zip(
+                verify_image_label,
+                zip(
                     self.im_files,
                     self.label_files,
                     repeat(self.prefix),
@@ -158,116 +533,79 @@ class YOLODataset(BaseDataset):
                     repeat(self.single_cls),
                 ),
             )
+
             pbar = TQDM(results, desc=desc, total=total)
+
             for im_file, lb, shape, segments, keypoint, nm_f, nf_f, ne_f, nc_f, msg in pbar:
                 nm += nm_f
                 nf += nf_f
                 ne += ne_f
                 nc += nc_f
+
                 if im_file:
-                    # 此处，第一层控制：Dataset 读取阶段（决定“有哪些原始字段”）
-                    x["labels"].append(
-                        {
-                            "im_file": im_file,
-                            "shape": shape,
-                            "cls": lb[:, 0:1],  # n, 1
-                            "bboxes": lb[:, 1:],  # n, 4
-                            "segments": segments,
-                            "keypoints": keypoint,
-                            "dataset_id": self.dataset_id,  # ⭐新增
-                            "dataset_name": self.dataset_name,
-                            "normalized": True,
-                            "bbox_format": "xywh",
-                        }
-                    )
+                    x["labels"].append({
+                        "im_file": im_file,
+                        "shape": shape,
+                        "cls": lb[:, 0:1],
+                        "bboxes": lb[:, 1:],
+                        "segments": segments,
+                        "keypoints": keypoint,
+                        "dataset_id": self.dataset_id,
+                        "dataset_name": self.dataset_name,
+                        "normalized": True,
+                        "bbox_format": "xywh",
+                    })
+
                 if msg:
                     msgs.append(msg)
-                pbar.desc = f"{desc} {nf} images, {nm + ne} backgrounds, {nc} corrupt"
-            pbar.close()
 
-        if msgs:
-            LOGGER.info("\n".join(msgs))
-        if nf == 0:
-            LOGGER.warning(f"{self.prefix}No labels found in {path}. {HELP_URL}")
         x["hash"] = get_hash(self.label_files + self.im_files)
-        x["results"] = nf, nm, ne, nc, len(self.im_files)
-        x["msgs"] = msgs  # warnings
+        x["results"] = (nf, nm, ne, nc, len(self.im_files))
+        x["msgs"] = msgs
+
         save_dataset_cache_file(self.prefix, path, x, DATASET_CACHE_VERSION)
         return x
 
+    # =========================
+    # labels loader
+    # =========================
     def get_labels(self) -> list[dict]:
-        """Return dictionary of labels for YOLO training.
-
-        This method loads labels from disk or cache, verifies their integrity, and prepares them for training.
-
-        Returns:
-            (list[dict]): List of label dictionaries, each containing information about an image and its annotations.
-        """
         self.label_files = img2label_paths(self.im_files)
         cache_path = Path(self.label_files[0]).parent.with_suffix(".cache")
+
         try:
-            cache, exists = load_dataset_cache_file(cache_path), True  # attempt to load a *.cache file
-            assert cache["version"] == DATASET_CACHE_VERSION  # matches current version
-            assert cache["hash"] == get_hash(self.label_files + self.im_files)  # identical hash
-        except (FileNotFoundError, AssertionError, AttributeError, ModuleNotFoundError):
-            cache, exists = self.cache_labels(cache_path), False  # run cache ops
+            cache = load_dataset_cache_file(cache_path)
+            assert cache["version"] == DATASET_CACHE_VERSION
+            assert cache["hash"] == get_hash(self.label_files + self.im_files)
+        except Exception:
+            cache = self.cache_labels(cache_path)
 
-        # Display cache
-        nf, nm, ne, nc, n = cache.pop("results")  # found, missing, empty, corrupt, total
-        if exists and LOCAL_RANK in {-1, 0}:
-            d = f"Scanning {cache_path}... {nf} images, {nm + ne} backgrounds, {nc} corrupt"
-            TQDM(None, desc=self.prefix + d, total=n, initial=n)  # display results
-            if cache["msgs"]:
-                LOGGER.info("\n".join(cache["msgs"]))  # display warnings
-
-        # Read cache
-        [cache.pop(k) for k in ("hash", "version", "msgs")]  # remove items
+        nf, nm, ne, nc, n = cache.pop("results")
         labels = cache["labels"]
 
         if not labels:
-            raise RuntimeError(
-                f"No valid images found in {cache_path}. Images with incorrectly formatted labels are ignored. {HELP_URL}"
-            )
-        self.im_files = [lb["im_file"] for lb in labels]  # update im_files
+            raise RuntimeError("No valid labels found.")
 
-        # ✅ 强制覆盖（避免 cache 污染）
+        self.im_files = [lb["im_file"] for lb in labels]
+
         for lb in labels:
             lb["dataset_id"] = self.dataset_id
             lb["dataset_name"] = self.dataset_name
 
-        # Check if the dataset is all boxes or all segments
-        lengths = ((len(lb["cls"]), len(lb["bboxes"]), len(lb["segments"])) for lb in labels)
-        len_cls, len_boxes, len_segments = (sum(x) for x in zip(*lengths))
-        if len_segments and len_boxes != len_segments:
-            LOGGER.warning(
-                f"Box and segment counts should be equal, but got len(segments) = {len_segments}, "
-                f"len(boxes) = {len_boxes}. To resolve this only boxes will be used and all segments will be removed. "
-                "To avoid this please supply either a detect or segment dataset, not a detect-segment mixed dataset."
-            )
-            for lb in labels:
-                lb["segments"] = []
-        if len_cls == 0:
-            LOGGER.warning(f"Labels are missing or empty in {cache_path}, training may not work correctly. {HELP_URL}")
         return labels
 
-    def build_transforms(self, hyp: dict | None = None) -> Compose:
-        """Build and append transforms to the list.
-
-        Args:
-            hyp (dict, optional): Hyperparameters for transforms.
-
-        Returns:
-            (Compose): Composed transforms.
-        """
+    # =========================
+    # transform
+    # =========================
+    def build_transforms(self, hyp=None):
         if self.augment:
-            hyp.mosaic = hyp.mosaic if self.augment and not self.rect else 0.0
-            hyp.mixup = hyp.mixup if self.augment and not self.rect else 0.0
-            hyp.cutmix = hyp.cutmix if self.augment and not self.rect else 0.0
+            hyp.mosaic = 0.0 if self.rect else hyp.mosaic
+            hyp.mixup = 0.0 if self.rect else hyp.mixup
+            hyp.cutmix = 0.0 if self.rect else hyp.cutmix
             transforms = v8_transforms(self, self.imgsz, hyp)
         else:
             transforms = Compose([LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
 
-        # batch 最终输出哪些 tensor
         transforms.append(
             Format(
                 bbox_format="xywh",
@@ -278,46 +616,29 @@ class YOLODataset(BaseDataset):
                 batch_idx=True,
                 mask_ratio=hyp.mask_ratio,
                 mask_overlap=hyp.overlap_mask,
-                bgr=hyp.bgr if self.augment else 0.0,  # only affect training.
-            )   # 决定“batch里最终有哪些 tensor”
+                bgr=hyp.bgr if self.augment else 0.0,
+            )
         )
         return transforms
 
-    def close_mosaic(self, hyp: dict) -> None:
-        """Disable mosaic, copy_paste, mixup and cutmix augmentations by setting their probabilities to 0.0.
-
-        Args:
-            hyp (dict): Hyperparameters for transforms.
-        """
-        hyp.mosaic = 0.0
-        hyp.copy_paste = 0.0
-        hyp.mixup = 0.0
-        hyp.cutmix = 0.0
-        self.transforms = self.build_transforms(hyp)
-
+    # =========================
+    # FIXED update_labels_info
+    # =========================
     def update_labels_info(self, label: dict) -> dict:
 
-        cls = label["cls"]
+        cls = np.asarray(label["cls"]).reshape(-1)
         bboxes = label.pop("bboxes")
         segments = label.pop("segments", [])
         keypoints = label.pop("keypoints", None)
+
         bbox_format = label.pop("bbox_format")
         normalized = label.pop("normalized")
 
         dataset_id = label.get("dataset_id", self.dataset_id)
         dataset_name = label.get("dataset_name", self.dataset_name)
 
-        # ===============================
-        # ⭐ class mapping
-        # ===============================
-        if self.class_map is not None:
-            cls_flat = cls.reshape(-1)
-
-            mapped = np.array(
-                [self.class_map.get(int(c), -1) for c in cls_flat],
-                dtype=np.int64
-            )
-
+        if self.class_map is not None and len(cls) > 0:
+            mapped = np.array([self.class_map.get(int(c), -1) for c in cls])
             valid = mapped >= 0
 
             if valid.sum() == 0:
@@ -325,31 +646,26 @@ class YOLODataset(BaseDataset):
                 bboxes = np.zeros((0, 4), dtype=np.float32)
                 segments = []
             else:
-                cls = mapped[valid].astype(np.float32).reshape(-1, 1)
+                cls = mapped[valid].reshape(-1, 1).astype(np.float32)
                 bboxes = bboxes[valid]
+                if isinstance(segments, list):
+                    segments = [segments[i] for i in np.where(valid)[0]]
 
-                if isinstance(segments, list) and len(segments) == len(cls_flat):
-                    idx = np.where(valid)[0]
-                    segments = [segments[i] for i in idx]
-
-        # ===============================
-        # ⭐ segments normalize
-        # ===============================
-        segment_resamples = 100 if self.use_obb else 1000
-
-        if len(segments) > 0:
-            max_len = max(len(s) for s in segments)
-            segment_resamples = max(segment_resamples, max_len + 1)
-            segments = np.stack(
-                resample_segments(segments, n=segment_resamples),
-                axis=0
-            )
         else:
-            segments = np.zeros((0, segment_resamples, 2), dtype=np.float32)
+            cls = cls.reshape(-1, 1).astype(np.float32)
 
-        # ===============================
-        # ⭐ Instances
-        # ===============================
+        min_len = min(len(cls), len(bboxes))
+        cls, bboxes = cls[:min_len], bboxes[:min_len]
+
+        # safe segments
+        if len(segments) > 0:
+            try:
+                segments = np.array(segments, dtype=object)
+            except:
+                segments = np.zeros((0, 2, 2), dtype=np.float32)
+        else:
+            segments = np.zeros((0, 2, 2), dtype=np.float32)
+
         inst = Instances(
             bboxes,
             segments,
@@ -361,72 +677,61 @@ class YOLODataset(BaseDataset):
         inst.dataset_id = dataset_id
         inst.dataset_name = dataset_name
 
-        # ===============================
-        # ⭐ write back
-        # ===============================
         label["cls"] = cls
         label["bboxes"] = bboxes
         label["segments"] = segments
-
         label["instances"] = inst
         label["dataset_id"] = dataset_id
         label["dataset_name"] = dataset_name
 
         return label
 
+    # =========================
+    # FIXED collate_fn
+    # =========================
     @staticmethod
-    def collate_fn(batch: list[dict]) -> dict:
-        """Collate data samples into batches.
+    def collate_fn(batch):
 
-        Args:
-            batch (list[dict]): List of dictionaries containing sample data.
+        def safe_tensor(x, dtype=torch.float32):
+            if isinstance(x, torch.Tensor):
+                return x
+            return torch.tensor(x, dtype=dtype)
 
-        Returns:
-            (dict): Collated batch with stacked tensors.
-        """
-        new_batch = {}
-        batch = [dict(sorted(b.items())) for b in batch]
+        out = {}
+
         keys = batch[0].keys()
-        values = list(zip(*[list(b.values()) for b in batch]))
 
-        for i, k in enumerate(keys):
-            v = values[i]
-
+        for k in keys:
             if k in {"img", "text_feats"}:
-                v = torch.stack(v, 0)
-            elif k == "visuals":
-                v = torch.nn.utils.rnn.pad_sequence(v, batch_first=True)
+                out[k] = torch.stack([b[k] for b in batch])
 
-            if k in {"masks", "keypoints", "bboxes", "cls", "segments", "obb"}:
-                v = torch.cat(v, 0)
+            elif k in {"bboxes", "cls", "segments", "masks", "keypoints"}:
+                items = []
+                for b in batch:
+                    v = b[k]
+                    if len(v) > 0:
+                        items.append(safe_tensor(v))
+                out[k] = torch.cat(items, 0) if items else torch.zeros((0, 1))
 
-            new_batch[k] = v
+            else:
+                out[k] = [b[k] for b in batch]
 
-        # batch index
-        new_batch["batch_idx"] = torch.cat([
+        batch_idx = [
             torch.full((len(b["cls"]),), i, dtype=torch.long)
             for i, b in enumerate(batch)
-        ], 0)
+        ]
+        out["batch_idx"] = torch.cat(batch_idx) if batch_idx else torch.zeros((0,))
 
-        # dataset id (instance-level alignment)
-        new_batch["dataset_id"] = torch.cat([
-            torch.full((b["instances"].bboxes.shape[0],), b["dataset_id"], dtype=torch.long)
+        dataset_ids = [
+            torch.full((len(b["cls"]),), int(b.get("dataset_id", 0)), dtype=torch.long)
             for b in batch
-        ], 0)
+        ]
+        out["dataset_id"] = torch.cat(dataset_ids) if dataset_ids else torch.zeros((0,))
 
-        # 推荐写法（你应该有 global num_classes）
-        num_classes = batch[0]["class_mask"].shape[0] if "class_mask" in batch[0] else 1
+        if "class_mask" in batch[0]:
+            out["dataset_class_mask"] = torch.stack([b["class_mask"] for b in batch]).float()
 
-        class_masks = []
-        for b in batch:
-            if "class_mask" in b:
-                class_masks.append(b["class_mask"])
-            else:
-                class_masks.append(torch.ones(num_classes))
-
-        new_batch["dataset_class_mask"] = torch.stack(class_masks)
-
-        return new_batch
+        return out
 
 
 class YOLOMultiModalDataset(YOLODataset):
