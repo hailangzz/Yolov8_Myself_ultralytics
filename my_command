@@ -107,6 +107,8 @@
             4月15号：
             python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain7/weights/best.pt --input-shape 1 3 960 960 --sim
 
+            python export_segment_onnx_model_static.py   -w /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain8/weights/best.pt --input-shape 1 3 960 960 --sim
+
 
     特别说明：当使用Focus算子时，模型训练时，使用原生Fouce算子训练。模型导出时，则该为自定义Fouce算子
 
@@ -198,11 +200,12 @@
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/yolov8s_wire_seg_finetune_stage1/stage2_full_finetune/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_960p_0427.rknn
 
 
-
     导出污渍检测模型：
         #4月15号：
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain7/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/liquid_seg_v1_rect_boxgain7_3588_960p.rknn
 
+        #5月8号：
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain8/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/liquid_seg_v1_rect_boxgain8_3588_960p.rknn
 
 
 rknn量化精度对比：
