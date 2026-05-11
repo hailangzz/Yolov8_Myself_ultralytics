@@ -84,6 +84,7 @@
     python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/detect/train9/weights/wire_foucs.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_foucs.rknn
 
     # 导出地毯识别RKNN模型
+
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_exp/yolov8_focus_v12/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_foucs.rknn
 
         # uint8量化
@@ -103,6 +104,8 @@
         # 2月10号
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_seg_v7.rknn
 
+        # android端模型
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.onnx rk3568 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/carpet_f_seg_v7_rk3568.rknn
 
 
     # 导出手势识别RKNN模型
@@ -123,6 +126,9 @@
 
     # 导出线材检测模型
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_5/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_0330.rknn
+
+        # android端模型
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_5/weights/best.onnx rk3568 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/wire_f_v3_3588_0330_rk3568.rknn
 
 rknn量化精度对比：
 
