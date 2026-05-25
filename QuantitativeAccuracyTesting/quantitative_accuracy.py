@@ -1,7 +1,8 @@
+import sys
+
+import cv2
 import numpy as np
 from rknn.api import RKNN
-import cv2
-import sys
 
 
 # 计算均方误差 (MSE)
@@ -33,7 +34,7 @@ def load_rknn_model(model_path):
         return None
 
     # 设置目标设备，并初始化运行时环境
-    target_device = 'rk3588'  # 根据硬件选择目标设备
+    target_device = "rk3588"  # 根据硬件选择目标设备
     ret = rknn_context.init_runtime(target=target_device)
     if ret != 0:
         print("Failed to initialize runtime")
