@@ -112,13 +112,18 @@ results.model.save("runs/my_hand_exp/yolov8_focus_sa_v3_reg_final.pt")
 # results = model.train(data="hand_detect.yaml", epochs=300, imgsz=416, device=-1, workers=0, batch=40, project="runs/my_hand_exp", name="yolov8_focus_sa_v", resume=True)
 
 # 训练线材检测模型
-model = YOLO("/home/chenkejing/PycharmProjects/ultralytics/ultralytics/cfg/models/v8/yolov8s_focus_sa_hand_v3.yaml")  # load a pretrained model (recommended for training)
+model = YOLO(
+    "/home/chenkejing/PycharmProjects/ultralytics/ultralytics/cfg/models/v8/yolov8s_focus_sa_hand_v3.yaml"
+)  # load a pretrained model (recommended for training)
 model.load("/home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_/weights/last.pt")
 # model.load("/home/chenkejing/PycharmProjects/ultralytics/yolov8s.pt")
-results = model.train(data="hand_detect.yaml", epochs=300, imgsz=416, device=-1, workers=0, batch=60, project="runs/my_hand_exp", name="yolov8_focus_sa_v3_")
-
-
-
-
-
-
+results = model.train(
+    data="hand_detect.yaml",
+    epochs=300,
+    imgsz=416,
+    device=-1,
+    workers=0,
+    batch=60,
+    project="runs/my_hand_exp",
+    name="yolov8_focus_sa_v3_",
+)
