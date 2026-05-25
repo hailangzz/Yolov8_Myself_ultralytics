@@ -1,20 +1,19 @@
-import Myself_Custom_model_structure.myself_model_struct as rk_head
+import argparse
+
 import onnx
 import torch
+
+import Myself_Custom_model_structure.myself_model_struct as rk_head
 from ultralytics import YOLO
 from ultralytics.nn.modules import head
-import argparse
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--weights", type=str, required=True,
-                        help="PyTorch yolov8 weights (.pt)")
+    parser.add_argument("-w", "--weights", type=str, required=True, help="PyTorch yolov8 weights (.pt)")
     parser.add_argument("--opset", type=int, default=11, help="ONNX opset version")
     parser.add_argument("--sim", action="store_true", help="simplify onnx model")
-    parser.add_argument("--input-shape", nargs="+", type=int,
-                        default=[1, 3, 640, 640],
-                        help="Static input shape")
+    parser.add_argument("--input-shape", nargs="+", type=int, default=[1, 3, 640, 640], help="Static input shape")
     parser.add_argument("--device", type=str, default="cpu")
 
     args = parser.parse_args()
@@ -64,12 +63,12 @@ def main(args):
         torch.onnx.export(
             model,
             fake_input,
-            save_path,                 # 直接写入文件
+            save_path,  # 直接写入文件
             opset_version=args.opset,
             input_names=["images"],
             output_names=output_names,
             do_constant_folding=True,  # 静态优化
-            dynamic_axes=None,         # ❗静态图关键点：关闭动态 shape
+            dynamic_axes=None,  # ❗静态图关键点：关闭动态 shape
         )
         # --------------------------------------------------------------
 
@@ -82,6 +81,7 @@ def main(args):
         if args.sim:
             try:
                 import onnxsim
+
                 model_onnx, check = onnxsim.simplify(model_onnx)
                 assert check
                 onnx.save(model_onnx, save_path)
