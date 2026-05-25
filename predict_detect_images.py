@@ -1,9 +1,12 @@
-import os
-from ultralytics import YOLO
-import cv2
 import argparse
+import os
+
+import cv2
 import torch
 from tqdm import tqdm  # 新增
+
+from ultralytics import YOLO
+
 
 def run_inference(model_path, imgs_dir, save_dir, save_only_with_boxes=False):
     # 自动选择设备
@@ -19,13 +22,12 @@ def run_inference(model_path, imgs_dir, save_dir, save_only_with_boxes=False):
     os.makedirs(save_dir, exist_ok=True)
 
     # 支持的图片格式
-    exts = ('.jpg', '.jpeg', '.png', '.bmp')
+    exts = (".jpg", ".jpeg", ".png", ".bmp")
 
     img_list = os.listdir(imgs_dir)
 
     # 遍历目录下所有图片（加进度条）
     for img_name in tqdm(img_list, desc="Inference Progress"):
-
         try:
             if not img_name.lower().endswith(exts):
                 continue
@@ -40,10 +42,8 @@ def run_inference(model_path, imgs_dir, save_dir, save_only_with_boxes=False):
 
             has_boxes = results.boxes is not None and len(results.boxes) > 0
 
-
             # 情况1：只保存有检测框的图像
-            if save_only_with_boxes==True:
-
+            if save_only_with_boxes:
                 if not has_boxes:
                     # print(f"> Skipped (no boxes): {img_path}")
                     continue
@@ -52,10 +52,8 @@ def run_inference(model_path, imgs_dir, save_dir, save_only_with_boxes=False):
                 img = cv2.imread(img_path)
 
             else:
-
                 # 情况2：保存所有图像，并绘制检测框
                 img = cv2.imread(img_path)
-
 
                 # 绘制检测框
                 for box in results.boxes:
@@ -66,11 +64,7 @@ def run_inference(model_path, imgs_dir, save_dir, save_only_with_boxes=False):
 
                     x1, y1, x2, y2 = map(int, xyxy)
                     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(img, label, (x1, y1 - 5),
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5, (0, 255, 0), 2)
-
-
+                    cv2.putText(img, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             # 保存结果
             save_path = os.path.join(save_dir, img_name)
@@ -86,8 +80,7 @@ def parse_args():
     parser.add_argument("--model_path", type=str, required=True, help="Path to the trained YOLO model")
     parser.add_argument("--imgs_dir", type=str, required=True, help="Directory containing the images to infer")
     parser.add_argument("--save_dir", type=str, required=True, help="Directory to save the inference results")
-    parser.add_argument("--save_only_with_boxes", default=True,
-                        help="Only save images that contain detection boxes")
+    parser.add_argument("--save_only_with_boxes", default=True, help="Only save images that contain detection boxes")
     return parser.parse_args()
 
 
@@ -111,26 +104,25 @@ if __name__ == "__main__":
     # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /home/chenkejing/Desktop/hand_detect --save_dir ./results/hand_model_v7
 
 # 抽取手势识别模型，误检样本
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /home/chenkejing/Desktop/public_real_camera_images_0417_batch1 --save_dir ./results/hand_exist_sample
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /data/database/AITotal_SegmentDatabase/carpetDatabaseSegment/images/train  --save_dir ./results/hand_exist_sample
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /data/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/train  --save_dir ./results/hand_exist_sample
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /home/chenkejing/Desktop/public_real_camera_images_0417_batch1 --save_dir ./results/hand_exist_sample
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /data/database/AITotal_SegmentDatabase/carpetDatabaseSegment/images/train  --save_dir ./results/hand_exist_sample
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /data/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/train  --save_dir ./results/hand_exist_sample
 
-    # 测试手势识别模型效果，并保存图像
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/my_hand_finetune/stage2_full_finetune/weights/best.pt --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/hand_detect/date0420/images  --save_dir ./results/hand_exist_sample --save_only_with_boxes true
+# 测试手势识别模型效果，并保存图像
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/my_hand_finetune/stage2_full_finetune/weights/best.pt --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/hand_detect/date0420/images  --save_dir ./results/hand_exist_sample --save_only_with_boxes true
 
 #############
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.pt --imgs_dir /home/chenkejing/Desktop/hand_detect --save_dir ./results/hand_focus_sa_v2
-    #3月11日
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.pt --imgs_dir /home/chenkejing/Desktop/rgb_images --save_dir ./results/hand_focus_sa_v2_rgb
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.pt --imgs_dir /home/chenkejing/Desktop/hand_detect --save_dir ./results/hand_focus_sa_v2
+# 3月11日
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v2/weights/best.pt --imgs_dir /home/chenkejing/Desktop/rgb_images --save_dir ./results/hand_focus_sa_v2_rgb
 
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_5/weights/best.pt --imgs_dir /home/chenkejing/Desktop/hand_detect --save_dir ./results/hand_yolov8_focus_sa_v3_5
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_5/weights/best.pt --imgs_dir /home/chenkejing/Desktop/hand_detect --save_dir ./results/hand_yolov8_focus_sa_v3_5
 
 
-    # 测试地毯检测真实样本
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image --save_dir ./results/carpet
-    # python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_3/weights/best.pt --imgs_dir /home/chenkejing/Desktop/capture_images --save_dir ./results/hand_model_focus_sa_v3
+# 测试地毯检测真实样本
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image --save_dir ./results/carpet
+# python predict_detect_images.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_hand_exp/yolov8_focus_sa_v3_3/weights/best.pt --imgs_dir /home/chenkejing/Desktop/capture_images --save_dir ./results/hand_model_focus_sa_v3
 
-    #液体检测
-    #3月18日
-    # python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8s_Liquad_det_v1_5/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquad_model_focus_v3
-
+# 液体检测
+# 3月18日
+# python predict_detect_images.py --model_path /home/chenkejing/Desktop/yolov8s_Liquad_det_v1_5/weights/best.pt --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquad_model_focus_v3

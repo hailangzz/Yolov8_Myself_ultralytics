@@ -17,4 +17,3 @@ test: # test images (optional)
 # Classes
 names:
   0: liquid
-
