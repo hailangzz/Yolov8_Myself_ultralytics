@@ -1,10 +1,12 @@
-import torch
-from ultralytics import YOLO
-from rknn.api import RKNN
 import argparse
-import os
 
-def export_yolov8_to_rknn(model_path , onnx_path, rknn_path, imgsz=640, do_quant=False, calib_data=None):
+import torch
+from rknn.api import RKNN
+
+from ultralytics import YOLO
+
+
+def export_yolov8_to_rknn(model_path, onnx_path, rknn_path, imgsz=640, do_quant=False, calib_data=None):
     # 1️⃣ 加载 YOLOv8 模型
     model = YOLO(model_path)
 
@@ -20,7 +22,7 @@ def export_yolov8_to_rknn(model_path , onnx_path, rknn_path, imgsz=640, do_quant
         opset_version=16,
         input_names=["images"],
         output_names=["preds"],
-        dynamic_axes={"images": {0: "batch"}, "preds": {0: "batch"}}
+        dynamic_axes={"images": {0: "batch"}, "preds": {0: "batch"}},
     )
     print(f"[INFO] ONNX model exported to {onnx_path}")
 
@@ -39,9 +41,16 @@ def export_yolov8_to_rknn(model_path , onnx_path, rknn_path, imgsz=640, do_quant
     rknn.export_rknn(rknn_path)
     print(f"[INFO] RKNN model exported to {rknn_path}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Export YOLOv8 PT to RKNN (no postprocessing)")
-    parser.add_argument("--pt", type=str, required=True, default = r"/home/chenkejing/PycharmProjects/ultralytics/runs/detect/train3/weights/best.pt",help="Path to YOLOv8 .pt model")
+    parser.add_argument(
+        "--pt",
+        type=str,
+        required=True,
+        default=r"/home/chenkejing/PycharmProjects/ultralytics/runs/detect/train3/weights/best.pt",
+        help="Path to YOLOv8 .pt model",
+    )
     parser.add_argument("--onnx", type=str, default="model_no_post.onnx", help="Output ONNX path")
     parser.add_argument("--rknn", type=str, default="model_no_post.rknn", help="Output RKNN path")
     parser.add_argument("--imgsz", type=int, default=640, help="Input image size")
