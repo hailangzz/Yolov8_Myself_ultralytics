@@ -33,6 +33,29 @@ def main(args):
     device = args.device
     model.to(device)
 
+    # ======== EXPORT PATCH START ========
+    from ultralytics.nn.modules.head import Detect
+    from ultralytics.nn.modules.block import C2f
+
+    for m in model.modules():
+
+        # 1. Detect / Segment export 模式（必须）
+        if isinstance(m, Detect):
+            m.export = True
+            m.dynamic = False
+            m.training = False
+
+        # 2. Focus export 模式（关键）
+        if m.__class__.__name__ == "Focus":
+            m.export = True
+
+        # 3. C2f ONNX safe（避免 split graph 问题）
+        if isinstance(m, C2f):
+            if hasattr(m, "forward_split"):
+                m.forward = m.forward_split
+
+    # ======== EXPORT PATCH END ========
+
     # 静态shape 输入
     fake_input = torch.randn(args.input_shape).to(device)
 
