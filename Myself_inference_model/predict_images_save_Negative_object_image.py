@@ -44,7 +44,7 @@ def run_inference(model_path, imgs_dir, save_dir):
             img_path = os.path.join(imgs_dir, img_name)
 
             # 推理，关闭 YOLO 自带 log 输出 verbose=False
-            results = model(img_path, conf=0.55, verbose=False)[0]
+            results = model(img_path, conf=0.35, verbose=False)[0]
 
             # 读取原图
             img = cv2.imread(img_path)
@@ -105,7 +105,12 @@ if __name__ == "__main__":
     # 获取手势检测，误检负样本集
     # python /home/chenkejing/PycharmProjects/ultralytics/Myself_inference_model/predict_images_save_Negative_object_image.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v3/weights/best.pt --imgs_dir /home/chenkejing/database/AITotal_MixingImageDatabase --save_dir /home/chenkejing/database/Negativew_Example_Dataset/hand_model_v7/Negative_hand_database/images
     # python /home/chenkejing/PycharmProjects/ultralytics/Myself_inference_model/predict_images_save_Negative_object_image.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v3/weights/best.pt --imgs_dir /home/chenkejing/database/archive/coco2017/train2017 --save_dir /home/chenkejing/database/Negativew_Example_Dataset/hand_model_v7/Negative_hand_coco_database/images
-    
+    # python /home/chenkejing/PycharmProjects/ultralytics/Myself_inference_model/predict_images_save_Negative_object_image.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /data/database/AITotal_SegmentDatabase/carpetDatabaseSegment/images/train --save_dir /home/chenkejing/database/Negativew_Example_Dataset/hand_model_v7/carpetDatabaseSegment/images
+    # python /home/chenkejing/PycharmProjects/ultralytics/Myself_inference_model/predict_images_save_Negative_object_image.py --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt --imgs_dir /data/database/AITotal_SegmentDatabase/wireDatabaseSegment/images/train --save_dir /home/chenkejing/database/Negativew_Example_Dataset/hand_model_v7/wireDatabaseSegment/images
+      
+    # 获取污渍检测，误检样本集
+    # python /home/chenkejing/PycharmProjects/ultralytics/Myself_inference_model/predict_images_save_Negative_object_image.py --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain8/weights/best.pt --imgs_dir /data/database/coco2017/train2017 --save_dir /data/database/Negativew_Example_Dataset/liquid/Negative_liquid_coco_database/images
+      
     
     
     """

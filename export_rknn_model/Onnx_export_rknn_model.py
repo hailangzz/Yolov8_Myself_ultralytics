@@ -13,7 +13,7 @@ from rknn.api import RKNN
 DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image/liquid_quant.txt'
 
 # 手势检测量化数据集
-# DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/hand_real_image/hand_quant.txt'
+#DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/hand_real_image/hand_quant.txt'
 
 DEFAULT_RKNN_PATH = '../model/yolov8.rknn'
 DEFAULT_QUANT = True

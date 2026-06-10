@@ -1,0 +1,6 @@
+# 导出地毯识别RKNN模型
+
+    #5月12号
+        python scriptfile/Onnx_export_rknn_model.py ./onnx_models/yolov8s_carpet_seg_v1_5/weights/best.onnx rk3588 i8 ./rknn_models/carpet_f_seg_0512.rknn
+
+

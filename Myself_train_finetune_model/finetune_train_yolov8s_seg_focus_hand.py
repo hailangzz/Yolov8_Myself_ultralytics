@@ -10,7 +10,7 @@ from ultralytics import YOLO
 
 if __name__ == "__main__":
 
-    model = YOLO("/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v7/weights/best.pt")
+    model = YOLO("/home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_hand_exp/yolov8_focus_v8/weights/best.pt")
 
     model.train(
         task="detect",
@@ -55,7 +55,7 @@ from ultralytics import YOLO
 
 if __name__ == "__main__":
 
-    model = YOLO("runs/my_hand_finetune/stage1_head_only/weights/best.pt")
+    model = YOLO("runs/my_hand_finetune/stage1_head_only2/weights/best.pt")
 
     model.train(
         task="detect",
