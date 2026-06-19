@@ -1,10 +1,12 @@
-import Myself_Custom_model_structure.myself_model_struct as rk_head
+import argparse
 from io import BytesIO
+
 import onnx
 import torch
+
+import Myself_Custom_model_structure.myself_model_struct as rk_head
 from ultralytics import YOLO
 from ultralytics.nn.modules import head
-import argparse
 
 try:
     import onnxsim
@@ -14,9 +16,7 @@ except ImportError:
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-w", "--weights", type=str, required=True, help="PyTorch yolov8 weights"
-    )
+    parser.add_argument("-w", "--weights", type=str, required=True, help="PyTorch yolov8 weights")
     parser.add_argument("--opset", type=int, default=11, help="ONNX opset version")
     parser.add_argument("--sim", action="store_true", help="simplify onnx model")
     parser.add_argument(
@@ -31,13 +31,14 @@ def parse_args():
     assert len(args.input_shape) == 4
     return args
 
+
 def main(args):
     # 如果你有自定义 Detect forward，例如 RKNN 修改
     setattr(head.Detect, "forward", rk_head.detect_forward)
 
     # 加载 YOLOv8 PyTorch 模型
     model = YOLO(args.weights).model  # 获取 PyTorch model
-    model = model.fuse().eval()       # Fuse Conv + BN
+    model = model.fuse().eval()  # Fuse Conv + BN
 
     # 将模型移动到指定设备
     device = args.device if hasattr(args, "device") else "cpu"
@@ -77,8 +78,10 @@ def main(args):
                 opset_version=getattr(args, "opset", 17),
                 input_names=["images"],
                 output_names=output_names,
-                dynamic_axes={"images": {0: "batch"},  # batch 可变
-                              **{name: {0: "batch"} for name in output_names}},
+                dynamic_axes={
+                    "images": {0: "batch"},  # batch 可变
+                    **{name: {0: "batch"} for name in output_names},
+                },
             )
             f.seek(0)
             onnx_model = onnx.load(f)
@@ -102,6 +105,7 @@ def main(args):
 
     except Exception as e:
         print(f"ONNX export failed: {e}")
+
 
 if __name__ == "__main__":
     main(parse_args())

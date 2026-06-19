@@ -38,6 +38,7 @@ from .block import (
     Bottleneck,
     BottleneckCSP,
     C2f,
+    C2f_SA,
     C2fAttn,
     C2fCIB,
     C2fPSA,
@@ -47,6 +48,7 @@ from .block import (
     CBFuse,
     CBLinear,
     ContrastiveHead,
+    EdgeConv,
     GhostBottleneck,
     HGBlock,
     HGStem,
@@ -59,8 +61,6 @@ from .block import (
     ResNetLayer,
     SCDown,
     TorchVision,
-    EdgeConv,
-    C2f_SA,
 )
 from .conv import (
     CBAM,
@@ -132,6 +132,7 @@ __all__ = (
     "C2fAttn",
     "C2fCIB",
     "C2fPSA",
+    "C2f_SA",
     "C3Ghost",
     "C3k2",
     "C3x",
@@ -149,6 +150,7 @@ __all__ = (
     "DeformableTransformerDecoder",
     "DeformableTransformerDecoderLayer",
     "Detect",
+    "EdgeConv",
     "Focus",
     "GhostBottleneck",
     "GhostConv",
@@ -181,6 +183,4 @@ __all__ = (
     "YOLOEDetect",
     "YOLOESegment",
     "v10Detect",
-    "EdgeConv",
-    "C2f_SA",
 )
