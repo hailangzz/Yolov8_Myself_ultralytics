@@ -173,6 +173,9 @@ if __name__ == "__main__":
         # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_5/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Carpet_Customer_Database/date0508/images  --save_dir ./results/carpet  --conf 0.55
         # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_5/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Wire_Customer_Database/date0519/WireSegmentProject/images  --save_dir ./results/carpet  --conf 0.55
 
+        # 6月15日：
+        # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_6/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Carpet_Customer_Database/date0612/images  --save_dir ./results/carpet  --conf 0.55
+
     # 线材检测
         # 0316线材检测
         # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_2/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
@@ -202,7 +205,8 @@ if __name__ == "__main__":
         # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage25/weights/best.pt  --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Wire_Customer_Database/date0514/WireSegmentProject/spatial_location_val_images/null_target  --save_dir ./results/wire  --conf 0.55
 
         #6月8号
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_8/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage16/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+
 
     # 0401液体检测
     # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
@@ -217,3 +221,6 @@ if __name__ == "__main__":
 
     # 6月1日
     # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain9/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquid  --conf 0.55
+
+    # 6月29日
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain11/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquid  --conf 0.55

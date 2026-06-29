@@ -4,10 +4,10 @@ from rknn.api import RKNN
 # DATASET_PATH = '/home/chenkejing/PycharmProjects/EMdoorTotalDetect/rk3588-convert-to-rknn/wire_quant_data/wire_quant.txt'
 
 # 地毯检测量化数据集
-# DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image/carpet_quant.txt'
+#DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image/carpet_quant.txt'
 
 # 线材检测量化数据集
-#DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_real_image/wire_quant.txt'
+# DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_real_image/wire_quant.txt'
 
 # 污渍检测量化数据集
 DATASET_PATH = '/home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image/liquid_quant.txt'

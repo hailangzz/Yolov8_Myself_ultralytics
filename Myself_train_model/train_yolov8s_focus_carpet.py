@@ -19,4 +19,23 @@ results = model.train(data="carpet_detect.yaml", epochs=300, imgsz=640, device=-
 
 
 
+"""
 
+# 创建tmux项目 
+tmux new -s yolov8_seg_training
+
+yolo segment train \
+    model=/workspace/data/TrainingScript/carpet_seg/yolov8-seg_focus_carpet.yaml \
+    data=/workspace/data/TrainingScript/carpet_seg/seg_carpet.yaml \
+    epochs=300 \
+    imgsz=640 \
+    batch=36 \
+    workers=6 \
+    amp=True \
+    project=runs/my_carpet_seg_exp \
+    name=yolov8s_carpet_seg_v1_ \
+    augment=True \
+    multi_scale=True \
+    device=0
+
+"""

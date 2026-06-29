@@ -75,24 +75,25 @@ yolo segment train \
 
 # 线材小目标检测
 
+tmux new -s yolov8_detect_training
+
 yolo segment train \
-    model=/workspace/data/TrainingScript/wire_seg/yolov8-seg_focus_wire_0330.yaml \
-    data=/workspace/data/TrainingScript/wire_seg/seg_wire.yaml \
+    model=/workspace/data/TrainingScript/plasticbag_seg/yolov8-seg_focus_plasticbag_0330.yaml \
+    data=/workspace/data/TrainingScript/plasticbag_seg/seg_plasticbag.yaml \
     epochs=300 \
     imgsz=960 \
     batch=24 \
     workers=8 \
     device=0 \
     amp=True \
-    project=runs/my_wire_seg_exp \
-    name=yolov8s_wire_seg_v2_ \
+    project=runs/my_plasticbag_seg_exp \
+    name=yolov8s_plasticbag_seg_v1_ \
     save=True \
     save_period=15 \
     mosaic=0.5 \
     mixup=0.1 \
     close_mosaic=10 \
-    weight_decay=0.0005 \
-    box=7.5
+    weight_decay=0.0005 
     
 “”“
 我给你按“**工程视角 + YOLO内部机制**”把这条命令拆开讲清楚，你看完基本就能知道每一行在干什么，以及为什么这样调。
