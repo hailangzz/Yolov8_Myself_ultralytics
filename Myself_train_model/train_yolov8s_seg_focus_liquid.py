@@ -89,8 +89,6 @@ yolo segment train \
     weight_decay=0.0005 \
     device=0 
 
-
-
     说明：
     rect=True
     启用长宽比训练，避免原图 1902×1080 被强制缩放到 640×640 导致横向压缩。
@@ -98,6 +96,41 @@ yolo segment train \
     box=2.0
     对 YOLOv8 来说，这个参数可以放大 box regression loss 的权重，对小目标更敏感。
     默认是 0.05~0.1 左右，你可以先试 2.0 或 1.5，看训练效果。
+    
+断点续训：
+    yolo segment train \
+        model=/workspace/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain12/weights/last.pt \
+        resume=True \
+        project=runs/my_liquid_seg_exp \
+        name=yolov8s_liquid_seg_v1_rect_boxgain \
+        device=0  2>&1 | tee train.log
+        
+        
+记录了训练日志：
+ 2>&1 | tee train.log
+    
+加载预训练模型（微调、迁移学习）：
+    1. 训练中断后，使用 resume=True 继续训练。
+    2. 如果想从上次训练的最佳权重继续训练，可以使用 pretrained 参数指定最佳权重文件路径。
+    3. 如果想从上次训练的最后权重继续训练，可以使用 pretrained 参数指定最后权重文件路径。
+    4. 如果想从上次训练的最后权重继续训练，并且不想使用上次训练的优化器状态，可以使用 pretrained 参数指定最后权重文件路径，并且设置 resume=False。   
+    
+yolo segment train \
+    model=/workspace/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain12/weights/last.pt \
+    data=/workspace/data/TrainingScript/liquid_seg/seg_liquid.yaml \
+    epochs=300 \
+    imgsz=960 \
+    batch=24 \
+    workers=6 \
+    amp=True \
+    project=runs/my_liquid_seg_exp \
+    name=yolov8s_liquid_seg_v1_rect_boxgain \
+    augment=True \
+    weight_decay=0.0005 \
+    device=0  2>&1 | tee train.log
+    
+
+
         
 """
 

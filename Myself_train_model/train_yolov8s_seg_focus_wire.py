@@ -605,7 +605,7 @@ yolo segment train \
           project=runs/my_wire_seg_exp \
           name=yolov8s_wire_seg_finetune_stage15
           
-        # 继续训练
+        # 加载预训练模型：微调、迁移学习训练
         yolo segment train \
             model=/workspace/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage15/weights/best.pt \
             data=/workspace/data/TrainingScript/wire_seg/seg_wire_finetune.yaml \
