@@ -82,8 +82,8 @@ yolo segment train \
     data=/workspace/data/TrainingScript/plasticbag_seg/seg_plasticbag.yaml \
     epochs=300 \
     imgsz=960 \
-    batch=24 \
-    workers=8 \
+    batch=36 \
+    workers=4 \
     device=0 \
     amp=True \
     project=runs/my_plasticbag_seg_exp \
@@ -93,7 +93,24 @@ yolo segment train \
     mosaic=0.5 \
     mixup=0.1 \
     close_mosaic=10 \
-    weight_decay=0.0005 
+    weight_decay=0.0005
+
+yolo segment train \
+    model=/workspace/runs/my_plasticbag_seg_exp/yolov8s_plasticbag_seg_v1_2/weights/best.pt \
+    data=/workspace/data/TrainingScript/plasticbag_seg/seg_plasticbag.yaml \
+    epochs=300 \
+    imgsz=960 \
+    batch=36 \
+    workers=4 \
+    device=0 \
+    amp=True \
+    project=runs/my_plasticbag_seg_exp \
+    name=yolov8s_plasticbag_seg_v1_ \
+    save=True \
+    save_period=15 \
+    mosaic=0.5 \
+    mixup=0.1 \
+    close_mosaic=10
     
 “”“
 我给你按“**工程视角 + YOLO内部机制**”把这条命令拆开讲清楚，你看完基本就能知道每一行在干什么，以及为什么这样调。
