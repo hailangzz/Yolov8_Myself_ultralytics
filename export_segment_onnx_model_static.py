@@ -1,13 +1,12 @@
-import Myself_Custom_model_structure.myself_model_struct as rk_head
-
+import argparse
 from io import BytesIO
+
 import onnx
 import torch
+
+import Myself_Custom_model_structure.myself_model_struct as rk_head
 from ultralytics import YOLO
 from ultralytics.nn.modules import head
-import argparse
-from onnx import shape_inference
-
 
 try:
     import onnxsim
@@ -17,9 +16,7 @@ except ImportError:
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-w", "--weights", type=str, required=True, help="PyTorch yolov8 weights"
-    )
+    parser.add_argument("-w", "--weights", type=str, required=True, help="PyTorch yolov8 weights")
     parser.add_argument("--opset", type=int, default=11, help="ONNX opset version")
     parser.add_argument("--sim", action="store_true", help="simplify onnx model")
     parser.add_argument(
@@ -36,18 +33,17 @@ def parse_args():
 
 
 def main(args):
-    setattr(head.Segment, "forward", rk_head.segment_forward)
-    setattr(head.Detect, "forward", rk_head.detect_forward)
+    head.Segment.forward = rk_head.segment_forward
+    head.Detect.forward = rk_head.detect_forward
     YOLOv8 = YOLO(args.weights)
     model = YOLOv8.model.fuse().eval()
     model.to(args.device)
 
     # ======== EXPORT PATCH START ========
-    from ultralytics.nn.modules.head import Segment
     from ultralytics.nn.modules.block import C2f
+    from ultralytics.nn.modules.head import Segment
 
     for m in model.modules():
-
         # 1. Detect / Segment export 模式（必须）
         if isinstance(m, Segment):
             m.export = True
@@ -59,9 +55,8 @@ def main(args):
             m.export = True
 
         # 3. C2f ONNX safe（避免 split graph 问题）
-        if isinstance(m, C2f):
-            if hasattr(m, "forward_split"):
-                m.forward = m.forward_split
+        if isinstance(m, C2f) and hasattr(m, "forward_split"):
+            m.forward = m.forward_split
 
     fake_input = torch.randn(args.input_shape).to(args.device)
     for _ in range(2):
