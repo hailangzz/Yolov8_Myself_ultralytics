@@ -1,12 +1,12 @@
-import json
 import argparse
+
 import pandas as pd
+
 from ultralytics import YOLO
 
 
 def eval_one_model(model_path, val_yaml):
-    """评估单个模型，返回指标dict"""
-
+    """评估单个模型，返回指标dict."""
     model = YOLO(model_path)
     metrics = model.val(data=val_yaml)
 
@@ -34,15 +34,12 @@ def eval_one_model(model_path, val_yaml):
         # 新增指标（关键）
         # ======================
         "miss_rate": 1 - recall,  # 漏检率
-        "false_alarm_rate": 1 - precision  # 误检率
+        "false_alarm_rate": 1 - precision,  # 误检率
     }
 
 
 def metrics_model_performance(model_paths, val_yaml, save_name):
-    """
-    model_paths: list[str]
-    """
-
+    """model_paths: list[str]."""
     all_results = {}
 
     for model_path in model_paths:
@@ -73,27 +70,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="YOLO Multi-model Evaluation")
 
     # 关键修改：支持多个模型路径
-    parser.add_argument(
-        "--model_paths",
-        type=str,
-        nargs="+",
-        required=True,
-        help="List of model paths"
-    )
+    parser.add_argument("--model_paths", type=str, nargs="+", required=True, help="List of model paths")
 
-    parser.add_argument(
-        "--val_yaml",
-        type=str,
-        required=True,
-        help="Validation yaml file"
-    )
+    parser.add_argument("--val_yaml", type=str, required=True, help="Validation yaml file")
 
-    parser.add_argument(
-        "--save_name",
-        type=str,
-        required=True,
-        help="Output CSV file name"
-    )
+    parser.add_argument("--save_name", type=str, required=True, help="Output CSV file name")
 
     return parser.parse_args()
 
@@ -101,11 +82,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    metrics_model_performance(
-        args.model_paths,
-        args.val_yaml,
-        args.save_name
-    )
+    metrics_model_performance(args.model_paths, args.val_yaml, args.save_name)
 
     # 模型性能评估，命令行脚本
     """

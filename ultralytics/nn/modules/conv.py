@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 import math
+
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 
 __all__ = (
     "CBAM",
@@ -354,6 +355,8 @@ class ConvTranspose(nn.Module):
 #         return self.conv(y)
 
 import torch.nn.functional as F
+
+
 class Focus(nn.Module):
     export = False  # ⭐ 关键开关
 
@@ -367,7 +370,7 @@ class Focus(nn.Module):
         # ============================
         if self.export:
             if x.shape[1] == 3:
-                weight_np = np.zeros((12, 3, 2, 2), dtype='float32')
+                weight_np = np.zeros((12, 3, 2, 2), dtype="float32")
                 weight_np[0:1, 0:1, 0:1, 0:1] = 1
                 weight_np[1:2, 1:2, 0:1, 0:1] = 1
                 weight_np[2:3, 2:3, 0:1, 0:1] = 1
@@ -385,7 +388,7 @@ class Focus(nn.Module):
                 weight_np[11:12, 2:3, 1:2, 1:2] = 1
 
             elif x.shape[1] == 1:
-                weight_np = np.zeros((4, 1, 2, 2), dtype='float32')
+                weight_np = np.zeros((4, 1, 2, 2), dtype="float32")
                 weight_np[0:1, 0:1, 0:1, 0:1] = 1
                 weight_np[1:2, 0:1, 1:2, 0:1] = 1
                 weight_np[2:3, 0:1, 0:1, 1:2] = 1
@@ -395,15 +398,7 @@ class Focus(nn.Module):
 
             weight_tensor = torch.from_numpy(weight_np).to(x.device)
 
-            y = F.conv2d(
-                x,
-                weight=weight_tensor,
-                bias=None,
-                stride=2,
-                padding=0,
-                dilation=1,
-                groups=1
-            )
+            y = F.conv2d(x, weight=weight_tensor, bias=None, stride=2, padding=0, dilation=1, groups=1)
 
         # ============================
         # 🧠 TRAIN MODE（原始 slicing）
@@ -420,6 +415,7 @@ class Focus(nn.Module):
             )
 
         return self.conv(y)
+
 
 class GhostConv(nn.Module):
     """Ghost Convolution module.
