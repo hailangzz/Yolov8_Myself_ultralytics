@@ -8,7 +8,7 @@ import requests
 import time
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 import cv2
 
@@ -114,10 +114,8 @@ class SAM3VideoClient:
             "model":
                 self.model,
 
-
             "frames":
                 frames,
-
 
             "start_frame_index":
                 0
@@ -201,75 +199,56 @@ class SAM3VideoClient:
         }
 
 
+        r=requests.post(
 
-        try:
+            self.server+
+            "/v1/video/prompt",
 
+            json=payload,
 
-            r=requests.post(
+            timeout=300
 
-                self.server+
-                "/v1/video/prompt",
-
-                json=payload,
-
-                timeout=300
-
-            )
+        )
 
 
-            result=r.json()
+        result=r.json()
 
 
-            print(
-                "PROMPT:",
-                result
-            )
+        print(
+            "PROMPT:",
+            result
+        )
 
 
-            if not result.get(
-                "success",
-                False
-            ):
-
-                return None
-
-
-
-            masks=result.get(
-                "data",
-                {}
-            ).get(
-                "masks",
-                []
-            )
-
-
-
-            if len(masks)==0:
-
-                print(
-                    "No object:",
-                    text
-                )
-
-                return None
-
-
-
-            return result
-
-
-
-        except Exception as e:
-
-
-            print(
-                "prompt error:",
-                e
-            )
-
+        if not result.get(
+            "success",
+            False
+        ):
 
             return None
+
+
+
+        masks=result.get(
+            "data",
+            {}
+        ).get(
+            "masks",
+            []
+        )
+
+
+        if len(masks)==0:
+
+            print(
+                "No object:",
+                text
+            )
+
+            return None
+
+
+        return result
 
 
 
@@ -356,8 +335,8 @@ class SAM3VideoClient:
             )
 
 
-
         return result["data"]["task_id"]
+
 
 
 
@@ -366,7 +345,6 @@ class SAM3VideoClient:
     ########################################
     # wait
     ########################################
-
 
     def wait(
 
@@ -435,7 +413,7 @@ class SAM3VideoClient:
 
 
     ########################################
-    # draw mask polygon
+    # save mask + YOLOv8-seg
     ########################################
 
 
@@ -447,7 +425,11 @@ class SAM3VideoClient:
 
         image_paths,
 
-        output_dir="./vis"
+        output_dir="./vis",
+
+        label_dir="./labels",
+
+        class_id=0
 
     ):
 
@@ -456,6 +438,13 @@ class SAM3VideoClient:
             output_dir,
             exist_ok=True
         )
+
+
+        os.makedirs(
+            label_dir,
+            exist_ok=True
+        )
+
 
 
         results=result.get(
@@ -480,6 +469,7 @@ class SAM3VideoClient:
                 idx=int(frame_id)
 
 
+
                 img=Image.open(
                     image_paths[idx]
                 ).convert(
@@ -491,6 +481,9 @@ class SAM3VideoClient:
 
 
 
+                h,w=img.shape[:2]
+
+
                 overlay=img.copy()
 
 
@@ -499,6 +492,10 @@ class SAM3VideoClient:
                     "masks",
                     []
                 )
+
+
+                yolo_lines=[]
+
 
 
 
@@ -541,6 +538,50 @@ class SAM3VideoClient:
 
 
 
+                    #################################
+                    # YOLOv8 segmentation label
+                    #################################
+
+                    yolo_points=[]
+
+
+                    for x,y in polygon:
+
+
+                        nx=x/w
+
+                        ny=y/h
+
+
+                        yolo_points.append(
+                            f"{nx:.6f}"
+                        )
+
+
+                        yolo_points.append(
+                            f"{ny:.6f}"
+                        )
+
+
+
+                    yolo_lines.append(
+
+                        str(class_id)
+                        +
+                        " "
+                        +
+                        " ".join(
+                            yolo_points
+                        )
+
+                    )
+
+
+
+                    #################################
+                    # visualization
+                    #################################
+
                     mask=np.zeros(
 
                         img.shape[:2],
@@ -548,7 +589,6 @@ class SAM3VideoClient:
                         dtype=np.uint8
 
                     )
-
 
 
                     cv2.fillPoly(
@@ -575,7 +615,6 @@ class SAM3VideoClient:
 
 
                     alpha=0.4
-
 
 
                     area=mask>0
@@ -612,7 +651,7 @@ class SAM3VideoClient:
 
 
 
-                    x,y=polygon[0]
+                    x0,y0=polygon[0]
 
 
 
@@ -623,8 +662,8 @@ class SAM3VideoClient:
                         f"{label}:{score:.2f}",
 
                         (
-                            int(x),
-                            int(y)
+                            int(x0),
+                            int(y0)
                         ),
 
                         cv2.FONT_HERSHEY_SIMPLEX,
@@ -638,6 +677,12 @@ class SAM3VideoClient:
                     )
 
 
+
+
+
+                #################################
+                # save visualization image
+                #################################
 
                 save=os.path.join(
 
@@ -655,9 +700,59 @@ class SAM3VideoClient:
                 )
 
 
+
+
+                #################################
+                # save YOLO txt
+                #################################
+
+                txt_name=os.path.splitext(
+
+                    os.path.basename(
+                        image_paths[idx]
+                    )
+
+                )[0]+".txt"
+
+
+
+                txt_path=os.path.join(
+
+                    label_dir,
+
+                    txt_name
+
+                )
+
+
+
+                with open(
+
+                    txt_path,
+
+                    "w"
+
+                ) as f:
+
+
+                    for line in yolo_lines:
+
+                        f.write(
+                            line+"\n"
+                        )
+
+
+
+
                 print(
                     "saved:",
                     save
+                )
+
+
+                print(
+                    "label:",
+                    txt_path
                 )
 
 
@@ -692,7 +787,9 @@ if __name__=="__main__":
     )
 
 
+
     image_dir="./images"
+
 
 
     images=client.load_images(
@@ -707,8 +804,7 @@ if __name__=="__main__":
 
 
 
-    # 修改这里
-    target="chair"
+    target="carpet"
 
 
 
@@ -756,6 +852,10 @@ if __name__=="__main__":
 
         images,
 
-        "./vis"
+        output_dir="./vis",
+
+        label_dir="./labels",
+
+        class_id=0
 
     )
