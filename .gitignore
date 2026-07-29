@@ -207,3 +207,6 @@ calibration_*.npy
 
 /Myself_train_finetune_model/runs
 /.github/workflows/
+/Sam3_segmen_client_project/images/
+/Sam3_segmen_client_project/masks/
+/Sam3_segmen_client_project/vis/

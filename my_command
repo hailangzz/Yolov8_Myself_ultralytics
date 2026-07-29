@@ -258,6 +258,9 @@
         #6月26号：
         python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_plasticbag_seg_exp/yolov8s_plasticbag_seg_v1_2/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/plasticbag_seg_v1_2_3588_960p_0626.rknn
 
+        #7月6号：
+        python export_rknn_model/Onnx_export_rknn_model.py /home/chenkejing/PycharmProjects/ultralytics/runs/my_plasticbag_seg_exp/yolov8s_plasticbag_seg_v1_4/weights/best.onnx rk3588 i8 /home/chenkejing/PycharmProjects/ultralytics/rknn_models/plasticbag_seg_v1_2_3588_960p_0626.rknn
+
 rknn量化精度对比：
 
     python3 QuantitativeAccuracyTesting/quantitative_accuracy.py ./QuantitativeAccuracyTesting/rknn_models/carpet_sa_v2_fp32.rknn ./QuantitativeAccuracyTesting/rknn_models/carpet_sa_v2.rknn ./QuantitativeAccuracyTesting/test_image/image_343.jpg
