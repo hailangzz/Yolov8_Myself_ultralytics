@@ -13,7 +13,7 @@ from PIL import Image
 import cv2
 from utils.mask_filter import MaskFilter
 import re
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 ########################################
 # natural sort
@@ -33,19 +33,27 @@ def natural_sort_key(s):
     ]
 class SAM3VideoClient:
 
-
     def __init__(
-        self,
-        server="http://127.0.0.1:9000",
-        model="segment_anything_3_video",
-        enable_mask_filter=False
+            self,
+            server="http://127.0.0.1:9000",
+            model="segment_anything_3_video",
+            enable_mask_filter=False,
+            encode_workers=8,
+            prompt_workers=8
     ):
-        self.server=server.rstrip("/")
-        self.model=model
 
-        # mask过滤器
+        self.server = server.rstrip("/")
+        self.model = model
+
         self.enable_mask_filter = enable_mask_filter
-        self.mask_filter = MaskFilter(top_y_ratio=0.5)
+
+        self.encode_workers = encode_workers
+
+        self.prompt_workers = prompt_workers
+
+        self.mask_filter = MaskFilter(
+            top_y_ratio=0.5
+        )
 
     ########################################
     # image -> base64
@@ -105,30 +113,42 @@ class SAM3VideoClient:
 
         return images
 
+    def encode_images_parallel(
+            self,
+            images
+    ):
 
+        print(
+            "Encoding images:",
+            len(images)
+        )
 
+        with ThreadPoolExecutor(
+                max_workers=self.encode_workers
+        ) as executor:
+            frames = list(
+                executor.map(
+                    self.encode_image,
+                    images
+                )
+            )
+
+        return frames
 
     ########################################
     # init
     ########################################
 
     def init_sequence(
-        self,
-        images
+            self,
+            images
     ):
 
+        frames = self.encode_images_parallel(
+            images
+        )
 
-        frames=[]
-
-
-        for img in images:
-
-            frames.append(
-                self.encode_image(img)
-            )
-
-
-        payload={
+        payload = {
 
             "model":
                 self.model,
@@ -138,43 +158,175 @@ class SAM3VideoClient:
 
             "start_frame_index":
                 0
-
         }
 
-
-        r=requests.post(
-
-            self.server+
-            "/v1/video/init",
-
+        r = requests.post(
+            self.server + "/v1/video/init",
             json=payload,
-
             timeout=300
-
         )
 
+        result = r.json()
 
-        result=r.json()
-
-
-        print(
-            "INIT:",
-            result
-        )
-
-
-        if not result.get("success"):
-
-            raise RuntimeError(
-                result
-            )
-
+        if not result["success"]:
+            raise RuntimeError(result)
 
         return result["data"]["session_id"]
 
+    def search_prompt_parallel(
 
+            self,
 
+            session_id,
 
+            target,
+
+            frame_num
+
+    ):
+
+        def worker(i):
+
+            result = self.prompt_text(
+
+                session_id,
+
+                target,
+
+                frame_index=i
+
+            )
+
+            if result is None:
+                return -1
+
+            masks = result.get(
+                "data",
+                {}
+            ).get(
+                "masks",
+                []
+            )
+
+            if len(masks) > 0:
+                return i
+
+            return -1
+
+        with ThreadPoolExecutor(
+                max_workers=self.prompt_workers
+        ) as executor:
+
+            results = list(
+
+                executor.map(
+
+                    worker,
+
+                    range(frame_num)
+
+                )
+
+            )
+
+        for r in results:
+
+            if r >= 0:
+                return r
+
+        return -1
+
+    def process_one_chunk(
+
+            self,
+
+            images,
+
+            start,
+
+            end,
+
+            target,
+
+            class_id
+
+    ):
+
+        print(
+            "Start chunk:",
+            start,
+            end
+        )
+
+        chunk_images = images[start:end]
+
+        session = self.init_sequence(
+            chunk_images
+        )
+
+        prompt_frame = self.search_prompt_parallel(
+
+            session,
+
+            target,
+
+            len(chunk_images)
+
+        )
+
+        if prompt_frame < 0:
+            print(
+                "No object:",
+                start,
+                end
+            )
+
+            return
+
+        task = self.propagate(
+
+            session,
+
+            len(chunk_images),
+
+            prompt_frame
+
+        )
+
+        result = self.wait(
+            task
+        )
+
+        ################################
+        # 修正全局frame编号
+        ################################
+
+        new_result = {}
+
+        for k, v in result["results"].items():
+            new_result[
+                str(
+                    int(k) + start
+                )
+            ] = v
+
+        result["results"] = new_result
+
+        self.save_results(
+
+            result,
+
+            images,
+
+            class_id
+
+        )
+
+        print(
+            "Finished:",
+            start,
+            end
+        )
 
     ########################################
     # text prompt
@@ -845,206 +997,89 @@ class SAM3VideoClient:
 
             target,
 
-            chunk_size=100,
+            chunk_size=50,
 
-            class_id=0
+            class_id=0,
+
+            workers=2
 
     ):
 
-        total_frames = len(images)
-
-        print(
-            "Total frames:",
-            total_frames
-        )
-
-        ####################################
-        # 分chunk
-        ####################################
+        jobs = []
 
         for start in range(
-                0,
-                total_frames,
-                chunk_size
-        ):
 
+                0,
+
+                len(images),
+
+                chunk_size
+
+        ):
             end = min(
 
                 start + chunk_size,
 
-                total_frames
+                len(images)
 
             )
 
-            print(
-                "\n===================="
-            )
+            jobs.append(
 
-            print(
-                "Processing:",
-                start,
-                "~",
-                end - 1
-            )
-
-            ################################
-            # 当前chunk图片
-            ################################
-
-            chunk_images = images[start:end]
-
-            ################################
-            # init
-            ################################
-
-            session = self.init_sequence(
-
-                chunk_images
-
-            )
-
-            ################################
-            # 搜索prompt帧
-            ################################
-
-            prompt = None
-
-            prompt_frame = -1
-
-            for i in range(
-
-                    len(chunk_images)
-
-            ):
-
-                print(
-
-                    "Prompt search:",
-                    start + i
-
+                (
+                    start,
+                    end
                 )
 
-                prompt = self.prompt_text(
+            )
 
-                    session,
+        print(
+            "Total chunks:",
+            len(jobs)
+        )
 
-                    target,
+        with ThreadPoolExecutor(
 
-                    frame_index=i
+                max_workers=workers
 
-                )
+        ) as executor:
 
-                if prompt is None:
-                    continue
+            futures = []
 
-                masks = prompt.get(
+            for start, end in jobs:
+                futures.append(
 
-                    "data",
+                    executor.submit(
 
-                    {}
+                        self.process_one_chunk,
 
-                ).get(
+                        images,
 
-                    "masks",
+                        start,
 
-                    []
+                        end,
 
-                )
+                        target,
 
-                if len(masks) > 0:
-                    prompt_frame = i
-
-                    print(
-
-                        "Found object:",
-                        start + i
+                        class_id
 
                     )
 
-                    break
-
-            ################################
-            # 当前chunk无目标
-            ################################
-
-            if prompt_frame < 0:
-                print(
-
-                    "No object in chunk:",
-                    start,
-                    end
-
                 )
 
-                continue
+            for f in as_completed(futures):
 
-            ################################
-            # propagate
-            ################################
+                try:
 
-            task = self.propagate(
+                    f.result()
 
-                session,
 
-                len(chunk_images),
+                except Exception as e:
 
-                start_frame=prompt_frame
-
-            )
-
-            result = self.wait(
-
-                task
-
-            )
-
-            ################################
-            # 调整frame索引
-            ################################
-
-            new_result = {}
-
-            for k, v in result.get(
-
-                    "results",
-
-                    {}
-
-            ).items():
-                global_index = int(k) + start
-
-                new_result[
-
-                    str(global_index)
-
-                ] = v
-
-            result["results"] = new_result
-
-            ################################
-            # 保存
-            ################################
-
-            self.save_results(
-
-                result,
-
-                images,
-
-                class_id
-
-            )
-
-            print(
-
-                "Finished chunk:",
-
-                start,
-
-                end
-
-            )
-
+                    print(
+                        "Worker error:",
+                        e
+                    )
 
 
 
@@ -1055,38 +1090,152 @@ class SAM3VideoClient:
 
 if __name__=="__main__":
 
-    ################################
-    # 配置
-    ################################
+
+    ########################################
+    # 目标类别
+    # SAM3 text prompt输入
+    ########################################
 
     TARGET = "person"
 
+
+
+    ########################################
+    # 每个chunk包含的帧数量
+    #
+    # 例如:
+    # CHUNK_SIZE=2
+    #
+    # 表示:
+    # 每2张图片创建一个SAM3 video session
+    #
+    # 图片较少:
+    #     可以设置大一些，例如50~100
+    #
+    # 图片很多(几千张):
+    #     建议设置30~100
+    #
+    ########################################
+
     CHUNK_SIZE = 2
+
+
+
+    ########################################
+    # YOLOv8-seg类别编号
+    #
+    # 例如:
+    # person -> 0
+    # car    -> 1
+    # dog    -> 2
+    #
+    # 保存label时:
+    # 第一列就是该class_id
+    ########################################
 
     CLASS_ID = 0
 
-    enable_mask_filter_switch = False
 
 
-    client=SAM3VideoClient(
+    ########################################
+    # 创建SAM3客户端
+    ########################################
 
+    client = SAM3VideoClient(
+
+        # SAM3 Video Server地址
         server=
         "http://172.16.50.229:9000",
-        enable_mask_filter=enable_mask_filter_switch
+
+
+        # 是否启用mask后处理过滤
+        #
+        # True:
+        #     使用MaskFilter过滤异常mask
+        #
+        # False:
+        #     直接使用SAM3输出
+        #
+        enable_mask_filter=False,
+
+
+        ####################################
+        # 图片base64编码线程数
+        #
+        # 作用:
+        #     加速图片读取和编码
+        #
+        # CPU核心较多:
+        #     可以设置8~16
+        ####################################
+
+        encode_workers=8,
+
+
+
+        ####################################
+        # prompt搜索线程数
+        #
+        # 作用:
+        #     同一个chunk内，
+        #     并行搜索包含目标的frame
+        #
+        # 数值越大:
+        #     prompt寻找越快
+        #
+        # 注意:
+        #     会增加服务端请求压力
+        ####################################
+
+        prompt_workers=8
 
     )
 
 
-    image_dir="./images"
 
+    ########################################
+    # 加载图片
+    #
+    # 已经经过natural_sort排序
+    #
+    # 例如:
+    #
+    # image1.jpg
+    # image2.jpg
+    # image10.jpg
+    #
+    # 会按照数字顺序排列
+    ########################################
 
-    images=client.load_images(
-        image_dir
+    images = client.load_images(
+        "./images"
     )
 
-    ################################
-    # 分chunk执行SAM3
-    ################################
+
+
+    ########################################
+    # 开始分chunk执行SAM3 Video推理
+    #
+    # workers:
+    #     chunk并行数量
+    #
+    # 例如:
+    #
+    # workers=2
+    #
+    # 同时运行:
+    #
+    # chunk1:
+    #   frame 0-1
+    #
+    # chunk2:
+    #   frame 2-3
+    #
+    # 两个SAM3 session同时执行
+    #
+    # 注意:
+    #     数值过大会增加GPU显存占用
+    ########################################
 
     client.process_chunks(
 
@@ -1094,8 +1243,13 @@ if __name__=="__main__":
 
         TARGET,
 
+        # 每多少帧作为一个video chunk
         chunk_size=CHUNK_SIZE,
 
-        class_id=CLASS_ID
+        # YOLO类别编号
+        class_id=CLASS_ID,
+
+        # chunk并行线程数量
+        workers=2
 
     )
