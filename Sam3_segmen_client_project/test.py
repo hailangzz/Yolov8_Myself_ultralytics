@@ -11,7 +11,7 @@ import numpy as np
 from PIL import Image
 
 import cv2
-from utils.mask_filter import MaskFilter
+
 
 
 class SAM3VideoClient:
@@ -22,11 +22,11 @@ class SAM3VideoClient:
         server="http://127.0.0.1:9000",
         model="segment_anything_3_video"
     ):
+
         self.server=server.rstrip("/")
         self.model=model
 
-        # mask过滤器
-        self.mask_filter = MaskFilter(top_y_ratio=0.5)
+
 
     ########################################
     # image -> base64
@@ -437,9 +437,9 @@ class SAM3VideoClient:
         # 创建父目录
         ####################################
 
-        detected_root = "./result/detected"
+        detected_root = "./detected"
 
-        undetected_root = "./result/undetected"
+        undetected_root = "./undetected"
 
         detected_vis = os.path.join(
             detected_root,
@@ -514,12 +514,6 @@ class SAM3VideoClient:
                     "masks",
                     []
                 )
-
-                ################################
-                # SAM3 mask过滤
-                ################################
-
-                masks = self.mask_filter.filter_masks(masks, w, h)
 
                 ################################
                 # 是否检测到目标
