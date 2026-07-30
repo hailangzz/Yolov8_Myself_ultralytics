@@ -12,8 +12,25 @@ from PIL import Image
 
 import cv2
 from utils.mask_filter import MaskFilter
+import re
 
 
+########################################
+# natural sort
+########################################
+
+def natural_sort_key(s):
+
+    return [
+
+        int(text) if text.isdigit() else text.lower()
+
+        for text in re.split(
+            "([0-9]+)",
+            s
+        )
+
+    ]
 class SAM3VideoClient:
 
 
@@ -59,9 +76,9 @@ class SAM3VideoClient:
 
         images=[]
 
-
         for name in sorted(
-            os.listdir(image_dir)
+                os.listdir(image_dir),
+                key=natural_sort_key
         ):
 
             if name.lower().endswith(
