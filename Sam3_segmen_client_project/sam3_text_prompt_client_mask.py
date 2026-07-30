@@ -2,17 +2,17 @@
 # -*- coding:utf-8 -*-
 
 
-import os
 import base64
-import requests
+import os
+import re
 import time
 
+import cv2
 import numpy as np
+import requests
 from PIL import Image
 
-import cv2
 from utils.mask_filter import MaskFilter
-import re
 
 
 ########################################
@@ -20,7 +20,6 @@ import re
 ########################################
 
 def natural_sort_key(s):
-
     return [
 
         int(text) if text.isdigit() else text.lower()
@@ -31,17 +30,18 @@ def natural_sort_key(s):
         )
 
     ]
+
+
 class SAM3VideoClient:
 
-
     def __init__(
-        self,
-        server="http://127.0.0.1:9000",
-        model="segment_anything_3_video",
-        enable_mask_filter=False
+            self,
+            server="http://127.0.0.1:9000",
+            model="segment_anything_3_video",
+            enable_mask_filter=False
     ):
-        self.server=server.rstrip("/")
-        self.model=model
+        self.server = server.rstrip("/")
+        self.model = model
 
         # mask过滤器
         self.enable_mask_filter = enable_mask_filter
@@ -52,29 +52,25 @@ class SAM3VideoClient:
     ########################################
 
     def encode_image(
-        self,
-        path
+            self,
+            path
     ):
 
-        with open(path,"rb") as f:
-
+        with open(path, "rb") as f:
             return base64.b64encode(
                 f.read()
             ).decode()
-
-
 
     ########################################
     # load images
     ########################################
 
     def load_images(
-        self,
-        image_dir
+            self,
+            image_dir
     ):
 
-
-        images=[]
+        images = []
 
         for name in sorted(
                 os.listdir(image_dir),
@@ -82,13 +78,12 @@ class SAM3VideoClient:
         ):
 
             if name.lower().endswith(
-                (
-                    ".jpg",
-                    ".png",
-                    ".jpeg"
-                )
+                    (
+                            ".jpg",
+                            ".png",
+                            ".jpeg"
+                    )
             ):
-
                 images.append(
                     os.path.join(
                         image_dir,
@@ -96,39 +91,30 @@ class SAM3VideoClient:
                     )
                 )
 
-
         print(
             "frames:",
             len(images)
         )
 
-
         return images
-
-
-
 
     ########################################
     # init
     ########################################
 
     def init_sequence(
-        self,
-        images
+            self,
+            images
     ):
 
-
-        frames=[]
-
+        frames = []
 
         for img in images:
-
             frames.append(
                 self.encode_image(img)
             )
 
-
-        payload={
+        payload = {
 
             "model":
                 self.model,
@@ -141,10 +127,9 @@ class SAM3VideoClient:
 
         }
 
+        r = requests.post(
 
-        r=requests.post(
-
-            self.server+
+            self.server +
             "/v1/video/init",
 
             json=payload,
@@ -153,28 +138,19 @@ class SAM3VideoClient:
 
         )
 
-
-        result=r.json()
-
+        result = r.json()
 
         print(
             "INIT:",
             result
         )
 
-
         if not result.get("success"):
-
             raise RuntimeError(
                 result
             )
 
-
         return result["data"]["session_id"]
-
-
-
-
 
     ########################################
     # text prompt
@@ -182,45 +158,38 @@ class SAM3VideoClient:
 
     def prompt_text(
 
-        self,
+            self,
 
-        session_id,
+            session_id,
 
-        text,
+            text,
 
-        frame_index=0
+            frame_index=0
 
     ):
 
-
-        payload={
-
+        payload = {
 
             "session_id":
                 session_id,
 
-
             "model":
                 self.model,
-
 
             "frame_index":
                 frame_index,
 
-
             "text_prompt":
                 text,
-
 
             "obj_id":
                 1
 
         }
 
+        r = requests.post(
 
-        r=requests.post(
-
-            self.server+
+            self.server +
             "/v1/video/prompt",
 
             json=payload,
@@ -229,26 +198,20 @@ class SAM3VideoClient:
 
         )
 
-
-        result=r.json()
-
+        result = r.json()
 
         print(
             "PROMPT:",
             result
         )
 
-
         if not result.get(
-            "success",
-            False
+                "success",
+                False
         ):
-
             return None
 
-
-
-        masks=result.get(
+        masks = result.get(
             "data",
             {}
         ).get(
@@ -259,13 +222,7 @@ class SAM3VideoClient:
         if len(masks) == 0:
             return None
 
-
         return result
-
-
-
-
-
 
     ########################################
     # propagate
@@ -339,30 +296,23 @@ class SAM3VideoClient:
 
         return result["data"]["task_id"]
 
-
-
-
-
-
     ########################################
     # wait
     ########################################
 
     def wait(
 
-        self,
+            self,
 
-        task_id
+            task_id
 
     ):
 
-
         while True:
 
+            r = requests.get(
 
-            r=requests.get(
-
-                self.server+
+                self.server +
                 "/v1/video/status/"
                 +
                 task_id,
@@ -371,48 +321,33 @@ class SAM3VideoClient:
 
             )
 
-
-            result=r.json()
-
+            result = r.json()
 
             print(
                 result
             )
 
-
-            data=result.get(
+            data = result.get(
                 "data",
                 {}
             )
 
-
-            status=data.get(
+            status = data.get(
                 "status"
             )
 
-
-            if status=="completed":
-
+            if status == "completed":
                 return data
-
-
 
             if status in [
                 "failed",
                 "cancelled"
             ]:
-
                 raise RuntimeError(
                     result
                 )
 
-
-
             time.sleep(2)
-
-
-
-
 
     ########################################
     # save mask + YOLOv8-seg
@@ -937,19 +872,7 @@ class SAM3VideoClient:
                 if prompt is None:
                     continue
 
-                masks = prompt.get(
-
-                    "data",
-
-                    {}
-
-                ).get(
-
-                    "masks",
-
-                    []
-
-                )
+                masks = prompt.get("data", {}).get("masks", [])
 
                 if len(masks) > 0:
                     prompt_frame = i
@@ -1046,29 +969,25 @@ class SAM3VideoClient:
             )
 
 
-
-
 ############################################
 # main
 ############################################
 
 
-if __name__=="__main__":
-
+if __name__ == "__main__":
     ################################
     # 配置
     ################################
 
-    TARGET = "person"
+    TARGET = "carpet"
 
-    CHUNK_SIZE = 2
+    CHUNK_SIZE = 50
 
     CLASS_ID = 0
 
     enable_mask_filter_switch = False
 
-
-    client=SAM3VideoClient(
+    client = SAM3VideoClient(
 
         server=
         "http://172.16.50.229:9000",
@@ -1076,11 +995,9 @@ if __name__=="__main__":
 
     )
 
+    image_dir = "/home/chenkejing/Desktop/CarpetSegmentProject/spatial_location_val_images/carpet_detect/A10-25-YD-005002-test/20260730/null"
 
-    image_dir="./images"
-
-
-    images=client.load_images(
+    images = client.load_images(
         image_dir
     )
 
