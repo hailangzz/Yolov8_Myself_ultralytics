@@ -20,12 +20,14 @@ class SAM3VideoClient:
     def __init__(
         self,
         server="http://127.0.0.1:9000",
-        model="segment_anything_3_video"
+        model="segment_anything_3_video",
+        enable_mask_filter=False
     ):
         self.server=server.rstrip("/")
         self.model=model
 
         # mask过滤器
+        self.enable_mask_filter = enable_mask_filter
         self.mask_filter = MaskFilter(top_y_ratio=0.5)
 
     ########################################
@@ -237,14 +239,7 @@ class SAM3VideoClient:
             []
         )
 
-
-        if len(masks)==0:
-
-            print(
-                "No object:",
-                text
-            )
-
+        if len(masks) == 0:
             return None
 
 
@@ -259,44 +254,41 @@ class SAM3VideoClient:
     # propagate
     ########################################
 
+    ########################################
+    # propagate
+    ########################################
+
     def propagate(
 
-        self,
+            self,
 
-        session_id,
+            session_id,
 
-        num_frames
+            num_frames,
+
+            start_frame=0
 
     ):
 
-
-
-        payload={
-
+        payload = {
 
             "session_id":
                 session_id,
 
-
             "model":
                 self.model,
 
-
             "start_frame":
-                0,
-
+                start_frame,
 
             "end_frame":
-                num_frames-1
+                num_frames - 1
 
         }
 
+        r = requests.post(
 
-
-
-        r=requests.post(
-
-            self.server+
+            self.server +
             "/v1/video/propagate",
 
             json=payload,
@@ -305,23 +297,17 @@ class SAM3VideoClient:
 
         )
 
-
-        result=r.json()
-
+        result = r.json()
 
         print(
             "PROPAGATE:",
             result
         )
 
-
-
         if not result.get(
-            "success",
-            False
+                "success",
+                False
         ):
-
-
             raise RuntimeError(
 
                 result.get(
@@ -333,7 +319,6 @@ class SAM3VideoClient:
                 )
 
             )
-
 
         return result["data"]["task_id"]
 
@@ -519,7 +504,23 @@ class SAM3VideoClient:
                 # SAM3 mask过滤
                 ################################
 
-                masks = self.mask_filter.filter_masks(masks, w, h)
+                if self.enable_mask_filter:
+
+                    print(
+                        "[MaskFilter] enabled"
+                    )
+
+                    masks = self.mask_filter.filter_masks(
+                        masks,
+                        w,
+                        h
+                    )
+
+                else:
+
+                    print(
+                        "[MaskFilter] disabled"
+                    )
 
                 ################################
                 # 是否检测到目标
@@ -710,9 +711,22 @@ class SAM3VideoClient:
 
                 ####################################
                 # 保存可视化图片
+                # 原图名称 + _mask
                 ####################################
 
-                img_name = f"{idx:06d}_mask.jpg"
+                src_name = os.path.basename(
+
+                    image_paths[idx]
+
+                )
+
+                name, ext = os.path.splitext(
+
+                    src_name
+
+                )
+
+                img_name = name + "_mask" + ext
 
                 img_save = os.path.join(
 
@@ -802,6 +816,217 @@ class SAM3VideoClient:
 
                 )
 
+    ########################################
+    # chunk video processing
+    ########################################
+
+    def process_chunks(
+
+            self,
+
+            images,
+
+            target,
+
+            chunk_size=100,
+
+            class_id=0
+
+    ):
+
+        total_frames = len(images)
+
+        print(
+            "Total frames:",
+            total_frames
+        )
+
+        ####################################
+        # 分chunk
+        ####################################
+
+        for start in range(
+                0,
+                total_frames,
+                chunk_size
+        ):
+
+            end = min(
+
+                start + chunk_size,
+
+                total_frames
+
+            )
+
+            print(
+                "\n===================="
+            )
+
+            print(
+                "Processing:",
+                start,
+                "~",
+                end - 1
+            )
+
+            ################################
+            # 当前chunk图片
+            ################################
+
+            chunk_images = images[start:end]
+
+            ################################
+            # init
+            ################################
+
+            session = self.init_sequence(
+
+                chunk_images
+
+            )
+
+            ################################
+            # 搜索prompt帧
+            ################################
+
+            prompt = None
+
+            prompt_frame = -1
+
+            for i in range(
+
+                    len(chunk_images)
+
+            ):
+
+                print(
+
+                    "Prompt search:",
+                    start + i
+
+                )
+
+                prompt = self.prompt_text(
+
+                    session,
+
+                    target,
+
+                    frame_index=i
+
+                )
+
+                if prompt is None:
+                    continue
+
+                masks = prompt.get(
+
+                    "data",
+
+                    {}
+
+                ).get(
+
+                    "masks",
+
+                    []
+
+                )
+
+                if len(masks) > 0:
+                    prompt_frame = i
+
+                    print(
+
+                        "Found object:",
+                        start + i
+
+                    )
+
+                    break
+
+            ################################
+            # 当前chunk无目标
+            ################################
+
+            if prompt_frame < 0:
+                print(
+
+                    "No object in chunk:",
+                    start,
+                    end
+
+                )
+
+                continue
+
+            ################################
+            # propagate
+            ################################
+
+            task = self.propagate(
+
+                session,
+
+                len(chunk_images),
+
+                start_frame=prompt_frame
+
+            )
+
+            result = self.wait(
+
+                task
+
+            )
+
+            ################################
+            # 调整frame索引
+            ################################
+
+            new_result = {}
+
+            for k, v in result.get(
+
+                    "results",
+
+                    {}
+
+            ).items():
+                global_index = int(k) + start
+
+                new_result[
+
+                    str(global_index)
+
+                ] = v
+
+            result["results"] = new_result
+
+            ################################
+            # 保存
+            ################################
+
+            self.save_results(
+
+                result,
+
+                images,
+
+                class_id
+
+            )
+
+            print(
+
+                "Finished chunk:",
+
+                start,
+
+                end
+
+            )
 
 
 
@@ -813,78 +1038,47 @@ class SAM3VideoClient:
 
 if __name__=="__main__":
 
+    ################################
+    # 配置
+    ################################
+
+    TARGET = "person"
+
+    CHUNK_SIZE = 100
+
+    CLASS_ID = 0
+
+    enable_mask_filter_switch = False
+
 
     client=SAM3VideoClient(
 
         server=
-        "http://172.16.50.229:9000"
+        "http://172.16.50.229:9000",
+        enable_mask_filter=enable_mask_filter_switch
 
     )
 
 
-
     image_dir="./images"
-
 
 
     images=client.load_images(
         image_dir
     )
 
+    ################################
+    # 分chunk执行SAM3
+    ################################
 
-
-    session=client.init_sequence(
-        images
-    )
-
-
-
-    target="carpet"
-
-
-
-    prompt=client.prompt_text(
-
-        session,
-
-        target
-
-    )
-
-
-
-    if prompt is None:
-
-
-        print(
-            "目标不存在，退出"
-        )
-
-        exit(0)
-
-
-
-
-    task=client.propagate(
-
-        session,
-
-        len(images)
-
-    )
-
-
-
-    result=client.wait(
-        task
-    )
-
-    client.save_results(
-
-        result,
+    client.process_chunks(
 
         images,
 
-        class_id=0
+        TARGET,
+
+        chunk_size=CHUNK_SIZE,
+
+        class_id=CLASS_ID
 
     )
