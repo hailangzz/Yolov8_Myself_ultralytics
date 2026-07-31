@@ -30,7 +30,7 @@ def natural_sort_key(s):
 
 class SAM3HardMiningClient:
     def __init__(
-        self, server="http://127.0.0.1:9000", model="segment_anything_3_video"
+            self, server="http://127.0.0.1:9000", model="segment_anything_3_video"
     ):
 
         self.server = server.rstrip("/")
@@ -120,6 +120,7 @@ class SAM3HardMiningClient:
 
     ########################################
     # prompt
+
     ########################################
 
     def prompt(self, session, target):
