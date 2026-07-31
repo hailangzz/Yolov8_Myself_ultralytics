@@ -1,90 +1,115 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
-"""
-SAM3 Hard Mining Client
-
-功能:
-1. 输入一个包含 exist / middle / null 子目录的数据目录
-2. 将:
-   exist -> 小模型认为有目标
-   middle + null -> 小模型认为无目标/不确定
-3. 调用 SAM3 Video 服务推理
-4. 挖掘:
-   - exist 中 SAM3 未发现目标: 漏检 hard negative
-   - middle/null 中 SAM3 发现目标: 漏检 hard positive
-5. 输出 json 结果用于小模型优化
-"""
 
 import os
+import re
 import json
 import base64
-import re
-import time
 import argparse
 import requests
+import time
+
+
+############################################
+# natural sort
+############################################
 
 
 def natural_sort_key(s):
     return [
-        int(x) if x.isdigit() else x.lower()
-        for x in re.split(r"([0-9]+)", s)
+        int(text) if text.isdigit() else text.lower()
+        for text in re.split("([0-9]+)", s)
     ]
 
 
-class SAM3HardMiningClient:
+############################################
+# SAM3 Client
+############################################
 
+
+class SAM3HardMiningClient:
     def __init__(
-        self,
-        server="http://172.16.50.229:9000",
-        model="segment_anything_3_video"
+        self, server="http://127.0.0.1:9000", model="segment_anything_3_video"
     ):
+
         self.server = server.rstrip("/")
         self.model = model
 
+    ########################################
+    # image list
+    ########################################
+
+    def load_images(self, root):
+
+        data = {"positive": [], "negative": []}
+
+        exist_dir = os.path.join(root, "exist")
+
+        middle_dir = os.path.join(root, "middle")
+
+        null_dir = os.path.join(root, "null")
+
+        def scan(folder):
+
+            result = []
+
+            if not os.path.exists(folder):
+                return result
+
+            for name in sorted(os.listdir(folder), key=natural_sort_key):
+
+                if name.lower().endswith((".jpg", ".jpeg", ".png")):
+                    result.append(os.path.join(folder, name))
+
+            return result
+
+        exist = scan(exist_dir)
+
+        middle = scan(middle_dir)
+
+        null = scan(null_dir)
+
+        data["positive"] = exist
+
+        data["negative"] = middle + null
+
+        print("======================")
+
+        print("exist:", len(exist))
+
+        print("middle:", len(middle))
+
+        print("null:", len(null))
+
+        print("total:", len(exist) + len(middle) + len(null))
+
+        print("======================")
+
+        return data
+
+    ########################################
+    # image encode
+    ########################################
+
     def encode_image(self, path):
+
         with open(path, "rb") as f:
             return base64.b64encode(f.read()).decode()
 
-    def collect_images(self, image_dir):
-        groups = {
-            "exist": [],
-            "middle": [],
-            "null": []
-        }
+    ########################################
+    # SAM3 init
+    ########################################
 
-        for cls in groups:
-            folder = os.path.join(image_dir, cls)
-
-            if not os.path.exists(folder):
-                continue
-
-            for name in sorted(os.listdir(folder), key=natural_sort_key):
-                if name.lower().endswith(
-                    (".jpg", ".jpeg", ".png")
-                ):
-                    groups[cls].append(
-                        os.path.join(folder, name)
-                    )
-
-        return groups
-
-    def init_sequence(self, images):
+    def init_sequence(self, image):
 
         payload = {
             "model": self.model,
-            "frames": [
-                self.encode_image(x)
-                for x in images
-            ],
-            "start_frame_index": 0
+            "frames": [self.encode_image(image)],
+            "start_frame_index": 0,
         }
 
-        r = requests.post(
-            self.server + "/v1/video/init",
-            json=payload,
-            timeout=300
-        )
+        r = requests.post(self.server + "/v1/video/init", json=payload, timeout=300)
 
         result = r.json()
 
@@ -93,173 +118,154 @@ class SAM3HardMiningClient:
 
         return result["data"]["session_id"]
 
-    def prompt(self, session_id, text, frame_index):
+    ########################################
+    # prompt
+    ########################################
+
+    def prompt(self, session, target):
 
         payload = {
-            "session_id": session_id,
+            "session_id": session,
             "model": self.model,
-            "frame_index": frame_index,
-            "text_prompt": text,
-            "obj_id": 1
+            "frame_index": 0,
+            "text_prompt": target,
+            "obj_id": 1,
         }
 
-        r = requests.post(
-            self.server + "/v1/video/prompt",
-            json=payload,
-            timeout=300
-        )
+        r = requests.post(self.server + "/v1/video/prompt", json=payload, timeout=300)
 
         result = r.json()
 
-        if not result.get("success"):
+        if not result.get("success", False):
             return []
 
-        return result.get(
-            "data",
-            {}
-        ).get(
-            "masks",
-            []
-        )
+        masks = result.get("data", {}).get("masks", [])
 
-    def process_category(
-        self,
-        images,
-        category,
-        target
-    ):
+        return masks
 
-        results = []
+    ########################################
+    # SAM3 single image
+    ########################################
 
-        if len(images) == 0:
-            return results
+    def infer_image(self, image, target):
 
-        print(
-            "Processing",
-            category,
-            len(images)
-        )
+        session = self.init_sequence(image)
 
-        session = self.init_sequence(images)
+        masks = self.prompt(session, target)
 
-        for idx, img in enumerate(images):
+        return masks
 
-            masks = self.prompt(
-                session,
-                target,
-                idx
-            )
+    ########################################
+    # mining
+    ########################################
 
-            sam3_detect = len(masks) > 0
+    def run(self, dataset, target, root):
 
-            if category == "exist" and not sam3_detect:
-                status = "exist_but_sam3_miss"
+        false_positive = []
 
-            elif category in ["middle", "null"] and sam3_detect:
-                status = "sam3_found_but_small_model_miss"
+        false_negative = []
 
-            else:
-                continue
+        total = 0
 
-            results.append(
-                {
-                    "image": img,
-                    "small_model_category": category,
-                    "sam3_detect": sam3_detect,
-                    "sam3_mask_count": len(masks),
-                    "status": status
-                }
-            )
+        ####################################
+        # small model positive
+        ####################################
 
-        return results
+        print("\nProcessing exist...")
+
+        for img in dataset["positive"]:
+
+            total += 1
+
+            masks = self.infer_image(img, target)
+
+            if len(masks) == 0:
+                false_positive.append(
+                    {"image": os.path.relpath(img, root), "sam3_mask_count": 0}
+                )
+
+        ####################################
+        # small model negative
+        ####################################
+
+        print("\nProcessing negative...")
+
+        for img in dataset["negative"]:
+
+            total += 1
+
+            masks = self.infer_image(img, target)
+
+            if len(masks) > 0:
+                false_negative.append(
+                    {"image": os.path.relpath(img, root), "sam3_mask_count": len(masks)}
+                )
+
+        return {
+            "false_positive": false_positive,
+            "false_negative": false_negative,
+            "total": total,
+        }
+
+    ########################################
+    # save json
+    ########################################
+
+    def save_json(self, result, target, root, output):
+
+        total = result["total"]
+
+        fp = result["false_positive"]
+
+        fn = result["false_negative"]
+
+        data = {
+            "summary": {
+                "target": target,
+                "image_root": root,
+                "total_images": total,
+                "false_positive_count": len(fp),
+                "false_negative_count": len(fn),
+                "false_positive_rate": round(len(fp) / total, 6),
+                "false_negative_rate": round(len(fn) / total, 6),
+            },
+            "false_positive": fp,
+            "false_negative": fn,
+        }
+
+        with open(output, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+
+        print("\nResult saved:")
+
+        print(output)
+
+
+############################################
+# main
+############################################
 
 
 def main():
-
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--image_dir",
-        required=True,
-        help="包含 exist/middle/null 的目录"
-    )
+    parser.add_argument("--image_root", required=True)
 
-    parser.add_argument(
-        "--target",
-        default="carpet"
-    )
+    parser.add_argument("--target", required=True)
 
-    parser.add_argument(
-        "--server",
-        default="http://172.16.50.229:9000"
-    )
+    parser.add_argument("--server", default="http://172.16.50.229:9000")
 
-    parser.add_argument(
-        "--output",
-        default="sam3_hard_mining.json"
-    )
+    parser.add_argument("--output", default="sam3_hard_mining.json")
 
     args = parser.parse_args()
 
-    client = SAM3HardMiningClient(
-        server=args.server
-    )
+    client = SAM3HardMiningClient(server=args.server)
 
-    groups = client.collect_images(
-        args.image_dir
-    )
+    dataset = client.load_images(args.image_root)
 
-    all_results = []
+    result = client.run(dataset, args.target, args.image_root)
 
-    # exist: 关注SAM3漏检
-    all_results.extend(
-        client.process_category(
-            groups["exist"],
-            "exist",
-            args.target
-        )
-    )
-
-    # middle + null: 关注SAM3发现的新目标
-    all_results.extend(
-        client.process_category(
-            groups["middle"],
-            "middle",
-            args.target
-        )
-    )
-
-    all_results.extend(
-        client.process_category(
-            groups["null"],
-            "null",
-            args.target
-        )
-    )
-
-    output = {
-        "target": args.target,
-        "server": args.server,
-        "hard_samples": all_results,
-        "count": len(all_results)
-    }
-
-    with open(
-        args.output,
-        "w",
-        encoding="utf-8"
-    ) as f:
-        json.dump(
-            output,
-            f,
-            indent=4,
-            ensure_ascii=False
-        )
-
-    print(
-        "Saved:",
-        args.output
-    )
+    client.save_json(result, args.target, args.image_root, args.output)
 
 
 if __name__ == "__main__":
