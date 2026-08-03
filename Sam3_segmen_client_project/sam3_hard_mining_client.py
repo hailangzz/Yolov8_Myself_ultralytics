@@ -271,3 +271,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# 示例：python sam3_hard_mining_client.py --image_root /home/chenkejing/Desktop/CarpetSegmentProject/spatial_location_val_images/carpet_detect/A10-25-YD-005002-test/20260730 --target carpet
+# 示例：python sam3_hard_mining_client.py --image_root s3://robot-ai-platform/datasets/carpet_detection/source/images/A10-25-YD-005002-test/20260730/ --target carpet --server http://
