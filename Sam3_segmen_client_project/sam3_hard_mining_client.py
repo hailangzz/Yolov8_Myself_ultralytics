@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding:utf-8 -*-
 
 
+import argparse
+import base64
+import json
 import os
 import re
-import json
-import base64
-import argparse
-import requests
-import time
 
+import requests
 
 ############################################
 # natural sort
@@ -17,10 +15,7 @@ import time
 
 
 def natural_sort_key(s):
-    return [
-        int(text) if text.isdigit() else text.lower()
-        for text in re.split("([0-9]+)", s)
-    ]
+    return [int(text) if text.isdigit() else text.lower() for text in re.split("([0-9]+)", s)]
 
 
 ############################################
@@ -29,9 +24,7 @@ def natural_sort_key(s):
 
 
 class SAM3HardMiningClient:
-    def __init__(
-            self, server="http://127.0.0.1:9000", model="segment_anything_3_video"
-    ):
+    def __init__(self, server="http://127.0.0.1:9000", model="segment_anything_3_video"):
 
         self.server = server.rstrip("/")
         self.model = model
@@ -58,7 +51,6 @@ class SAM3HardMiningClient:
                 return result
 
             for name in sorted(os.listdir(folder), key=natural_sort_key):
-
                 if name.lower().endswith((".jpg", ".jpeg", ".png")):
                     result.append(os.path.join(folder, name))
 
@@ -175,15 +167,12 @@ class SAM3HardMiningClient:
         print("\nProcessing exist...")
 
         for img in dataset["positive"]:
-
             total += 1
 
             masks = self.infer_image(img, target)
 
             if len(masks) == 0:
-                false_positive.append(
-                    {"image": os.path.relpath(img, root), "sam3_mask_count": 0}
-                )
+                false_positive.append({"image": os.path.relpath(img, root), "sam3_mask_count": 0})
 
         ####################################
         # small model negative
@@ -192,15 +181,12 @@ class SAM3HardMiningClient:
         print("\nProcessing negative...")
 
         for img in dataset["negative"]:
-
             total += 1
 
             masks = self.infer_image(img, target)
 
             if len(masks) > 0:
-                false_negative.append(
-                    {"image": os.path.relpath(img, root), "sam3_mask_count": len(masks)}
-                )
+                false_negative.append({"image": os.path.relpath(img, root), "sam3_mask_count": len(masks)})
 
         return {
             "false_positive": false_positive,

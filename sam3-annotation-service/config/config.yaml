@@ -1,20 +1,16 @@
 model:
   path: /app/models/sam3.pt
 
-
 sam3:
   conf: 0.25
   quantize: 16
 
-
 runtime:
   device: cuda
-
 
 server:
   host: 0.0.0.0
   port: 9001
-
 
 output:
   dir: /app/output
