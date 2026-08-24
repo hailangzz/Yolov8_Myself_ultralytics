@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding:utf-8 -*-
 import argparse
 import base64
 import os
@@ -10,9 +9,7 @@ import cv2
 import numpy as np
 import requests
 from PIL import Image
-
 from utils.mask_filter import MaskFilter
-
 
 ########################################
 # natural sort
@@ -20,18 +17,15 @@ from utils.mask_filter import MaskFilter
 
 
 def natural_sort_key(s):
-    return [
-        int(text) if text.isdigit() else text.lower()
-        for text in re.split("([0-9]+)", s)
-    ]
+    return [int(text) if text.isdigit() else text.lower() for text in re.split("([0-9]+)", s)]
 
 
 class SAM3VideoClient:
     def __init__(
-            self,
-            server="http://127.0.0.1:9000",
-            model="segment_anything_3_video",
-            enable_mask_filter=False,
+        self,
+        server="http://127.0.0.1:9000",
+        model="segment_anything_3_video",
+        enable_mask_filter=False,
     ):
         self.server = server.rstrip("/")
         self.model = model
@@ -58,7 +52,6 @@ class SAM3VideoClient:
         images = []
 
         for name in sorted(os.listdir(image_dir), key=natural_sort_key):
-
             if name.lower().endswith((".jpg", ".png", ".jpeg")):
                 images.append(os.path.join(image_dir, name))
 
@@ -137,18 +130,14 @@ class SAM3VideoClient:
             "end_frame": num_frames - 1,
         }
 
-        r = requests.post(
-            self.server + "/v1/video/propagate", json=payload, timeout=300
-        )
+        r = requests.post(self.server + "/v1/video/propagate", json=payload, timeout=300)
 
         result = r.json()
 
         print("PROPAGATE:", result)
 
         if not result.get("success", False):
-            raise RuntimeError(
-                result.get("error", {}).get("message", "propagate failed")
-            )
+            raise RuntimeError(result.get("error", {}).get("message", "propagate failed"))
 
         return result["data"]["task_id"]
 
@@ -159,7 +148,6 @@ class SAM3VideoClient:
     def wait(self, task_id):
 
         while True:
-
             r = requests.get(self.server + "/v1/video/status/" + task_id, timeout=60)
 
             result = r.json()
@@ -221,9 +209,7 @@ class SAM3VideoClient:
         ####################################
 
         for frame_id, frame_data in results.items():
-
             try:
-
                 idx = int(frame_id)
 
                 img = Image.open(image_paths[idx]).convert("RGB")
@@ -241,13 +227,11 @@ class SAM3VideoClient:
                 ################################
 
                 if self.enable_mask_filter:
-
                     print("[MaskFilter] enabled")
 
                     masks = self.mask_filter.filter_masks(masks, w, h)
 
                 else:
-
                     print("[MaskFilter] disabled")
 
                 ################################
@@ -263,7 +247,6 @@ class SAM3VideoClient:
                 ################################
 
                 for obj in masks:
-
                     points = obj.get("points", [])
 
                     label = obj.get("label", "obj")
@@ -329,13 +312,11 @@ class SAM3VideoClient:
                 ####################################
 
                 if detected:
-
                     vis_dir = detected_vis
 
                     label_dir = detected_label
 
                 else:
-
                     vis_dir = undetected_vis
 
                     label_dir = undetected_label
@@ -359,27 +340,20 @@ class SAM3VideoClient:
                 # 保存YOLO label
                 ####################################
 
-                txt_name = (
-                        os.path.splitext(os.path.basename(image_paths[idx]))[0] + ".txt"
-                )
+                txt_name = os.path.splitext(os.path.basename(image_paths[idx]))[0] + ".txt"
 
                 txt_save = os.path.join(label_dir, txt_name)
 
                 with open(txt_save, "w") as f:
-
-                    for line in yolo_lines:
-                        f.write(line + "\n")
+                    f.writelines(line + "\n" for line in yolo_lines)
 
                 if detected:
-
                     print("[DETECTED]", img_save, txt_save)
 
                 else:
-
                     print("[UNDETECTED]", img_save, txt_save)
 
             except Exception as e:
-
                 print("frame error:", frame_id, e)
 
     ########################################
@@ -397,7 +371,6 @@ class SAM3VideoClient:
         ####################################
 
         for start in range(0, total_frames, chunk_size):
-
             end = min(start + chunk_size, total_frames)
 
             print("\n====================")
@@ -425,7 +398,6 @@ class SAM3VideoClient:
             prompt_frame = -1
 
             for i in range(len(chunk_images)):
-
                 print("Prompt search:", start + i)
 
                 prompt = self.prompt_text(session, target, frame_index=i)
@@ -493,13 +465,9 @@ class SAM3VideoClient:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SAM3 Video segmentation client")
 
-    parser.add_argument(
-        "--target", type=str, default="carpet", help="text prompt target, e.g. carpet"
-    )
+    parser.add_argument("--target", type=str, default="carpet", help="text prompt target, e.g. carpet")
 
-    parser.add_argument(
-        "--image_dir", type=str, default="./images", help="input image directory"
-    )
+    parser.add_argument("--image_dir", type=str, default="./images", help="input image directory")
 
     parser.add_argument(
         "--server",
@@ -524,9 +492,7 @@ if __name__ == "__main__":
     # 创建客户端
     ################################
 
-    client = SAM3VideoClient(
-        server=args.server, enable_mask_filter=enable_mask_filter_switch
-    )
+    client = SAM3VideoClient(server=args.server, enable_mask_filter=enable_mask_filter_switch)
 
     ################################
     # 加载图片
