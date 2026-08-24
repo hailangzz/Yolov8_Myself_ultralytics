@@ -72,7 +72,6 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
         if results.boxes is not None:
 
             for box in results.boxes:
-
                 xyxy = box.xyxy[0].cpu().numpy()
                 cls = int(box.cls)
                 conf = float(box.conf)
@@ -103,7 +102,6 @@ def run_segmentation(model_path, imgs_dir, save_dir, conf_thres=0.55):
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser(
         description="YOLOv8 Segmentation Inference Script"
     )
@@ -140,7 +138,6 @@ def parse_args():
 
 
 if __name__ == "__main__":
-
     args = parse_args()
 
     run_segmentation(
@@ -150,83 +147,83 @@ if __name__ == "__main__":
         args.conf
     )
 
-
     # 示例运行命令：
     # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_7/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/carpet_real_image_plus  --save_dir ./results/carpet  --conf 0.55
 
     # 地毯检测
-        #0416
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_10/weights/best.pt  --imgs_dir /home/chenkejing/Desktop/images  --save_dir ./results/carpet  --conf 0.55
+    # 0416
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_10/weights/best.pt  --imgs_dir /home/chenkejing/Desktop/images  --save_dir ./results/carpet  --conf 0.55
 
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage1_head_only/weights/best.pt  --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/carpet_detect/date0416/images  --save_dir ./results/carpet  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage1_head_only/weights/best.pt  --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/carpet_detect/date0416/images  --save_dir ./results/carpet  --conf 0.55
 
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune/weights/best.pt  --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/carpet_detect/date0416/images  --save_dir ./results/carpet  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune/weights/best.pt  --imgs_dir /home/chenkejing/database/object_camera_coordinates_image/carpet_detect/date0416/images  --save_dir ./results/carpet  --conf 0.55
 
-        #python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune/weights/best.pt  --imgs_dir /data/database/AITotal_Segment_ValDatabase/public_real_camera_images_0422_carpet_val_batch1  --save_dir ./results/carpet  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune/weights/best.pt  --imgs_dir /data/database/AITotal_Segment_ValDatabase/public_real_camera_images_0422_carpet_val_batch1  --save_dir ./results/carpet  --conf 0.55
 
-        #4月17
-        #python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune2/weights/best.pt --imgs_dir /home/chenkejing/Downloads/images/images  --save_dir ./results/carpet  --conf 0.55
+    # 4月17
+    # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune2/weights/best.pt --imgs_dir /home/chenkejing/Downloads/images/images  --save_dir ./results/carpet  --conf 0.55
 
-        # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune2/weights/best.pt --imgs_dir /home/chenkejing/Downloads/images  --save_dir ./results/carpet  --conf 0.55
+    # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune2/weights/best.pt --imgs_dir /home/chenkejing/Downloads/images  --save_dir ./results/carpet  --conf 0.55
 
-        #5月11日：
-        # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_5/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Carpet_Customer_Database/date0508/images  --save_dir ./results/carpet  --conf 0.55
-        # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_5/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Wire_Customer_Database/date0519/WireSegmentProject/images  --save_dir ./results/carpet  --conf 0.55
+    # 5月11日：
+    # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_5/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Carpet_Customer_Database/date0508/images  --save_dir ./results/carpet  --conf 0.55
+    # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_5/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Wire_Customer_Database/date0519/WireSegmentProject/images  --save_dir ./results/carpet  --conf 0.55
 
-        # 6月15日：
-        # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_6/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Carpet_Customer_Database/date0612/images  --save_dir ./results/carpet  --conf 0.55
+    # 6月15日：
+    # python predict_seg_images.py  --model_path  /home/chenkejing/PycharmProjects/ultralytics/runs/my_carpet_seg_exp/yolov8s_carpet_seg_v1_6/weights/best.pt --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Carpet_Customer_Database/date0612/images  --save_dir ./results/carpet  --conf 0.55
 
     # 线材检测
-        # 0316线材检测
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_2/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # 0316线材检测
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_2/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
-        # 0327线材检测
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_5/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # 0327线材检测
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_5/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
-        # 0331线材检测
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_rect_boxgain4/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # 0331线材检测
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v1_rect_boxgain4/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_5/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_wire_seg_exp/yolov8s_wire_seg_v1_5/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
-        #0407
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_4/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage1/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage22/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # 0407
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_4/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage1/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage22/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
-        #0427
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/yolov8s_wire_seg_finetune_stage1/stage2_full_finetune/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # 0427
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_finetune_model/runs/yolov8s_wire_seg_finetune_stage1/stage2_full_finetune/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
-        #0518
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_6/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
-        # 0519
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage14/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage25/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage25/weights/best.pt  --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Wire_Customer_Database/date0514/WireSegmentProject/spatial_location_val_images/null_target  --save_dir ./results/wire  --conf 0.55
+    # 0518
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_v2_6/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # 0519
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage14/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage25/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/Myself_train_model/runs/my_wire_seg_exp/yolov8s_wire_seg_finetune_stage25/weights/best.pt  --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Wire_Customer_Database/date0514/WireSegmentProject/spatial_location_val_images/null_target  --save_dir ./results/wire  --conf 0.55
 
-        #6月8号
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage16/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
-
+    # 6月8号
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_wire_seg_finetune_stage16/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/wire_images_test  --save_dir ./results/wire  --conf 0.55
 
     # 0401液体检测
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
 
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_exp/yolov8s_liquid_seg_v1_rect_boxgain/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_exp/yolov8s_liquid_seg_v1_rect_boxgain/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
 
-        # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain7/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/Desktop/yolov8s_liquid_seg_v1_rect_boxgain7/weights/last.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image  --save_dir ./results/liquid  --conf 0.55
 
-        # 5月8日
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain8/weights/best.pt  --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Liquid_Customer_Database/date0511/images --save_dir ./results/liquid  --conf 0.55
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain8/weights/best.pt  --imgs_dir /data/database/coco2017/test2017 --save_dir ./results/liquid  --conf 0.55
+    # 5月8日
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain8/weights/best.pt  --imgs_dir /data/database/AITotal_Real_Customer_Database/Real_Liquid_Customer_Database/date0511/images --save_dir ./results/liquid  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain8/weights/best.pt  --imgs_dir /data/database/coco2017/test2017 --save_dir ./results/liquid  --conf 0.55
 
-        # 6月1日
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain9/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquid  --conf 0.55
+    # 6月1日
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain9/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquid  --conf 0.55
 
-        # 6月29日
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain11/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquid  --conf 0.55
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain13/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquid  --conf 0.55
+    # 6月29日
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain11/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquid  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_liquid_seg_exp/yolov8s_liquid_seg_v1_rect_boxgain13/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/liquad_real_image --save_dir ./results/liquid  --conf 0.55
 
     # 7月1日塑料袋检测
-        # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_plasticbag_seg_exp/yolov8s_plasticbag_seg_v1_4/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/plastic_bag_real_image  --save_dir ./results/plastic_bag  --conf 0.55
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_plasticbag_seg_exp/yolov8s_plasticbag_seg_v1_4/weights/best.pt  --imgs_dir /home/chenkejing/PycharmProjects/ultralytics/images_mode_test/plastic_bag_real_image  --save_dir ./results/plastic_bag  --conf 0.55
 
-
+    # 行人检测
+    # 8月24日
+    # python predict_seg_images.py  --model_path /home/chenkejing/PycharmProjects/ultralytics/runs/my_person_seg_exp/yolov8s_person_seg_v1_2/weights/best.pt  --imgs_dir /home/chenkejing/database/No_Target_Example_Dataset/No_Target_database/NO_target_camera_images_0407_batch1/images  --save_dir ./results/person  --conf 0.3

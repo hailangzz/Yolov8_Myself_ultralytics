@@ -210,3 +210,9 @@ calibration_*.npy
 /Sam3_segmen_client_project/images/
 /Sam3_segmen_client_project/masks/
 /Sam3_segmen_client_project/vis/
+/Sam3_segmen_client_project/labels/
+/Sam3_segmen_client_project/result/
+/eval_carpet_result_finetune_0422.json
+/eval_carpet_result_finetune2_0422.json
+/Sam3_segmen_client_project/sam3_hard_mining.json
+/eval_compare.csv
