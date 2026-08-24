@@ -1,416 +1,147 @@
 #!/usr/bin/env python3
-# -*- coding:utf-8 -*-
 
 
-import os
 import base64
-import requests
+import os
+import sys
 import time
 
-import numpy as np
-from PIL import Image
-
 import cv2
-
+import numpy as np
+import requests
+from PIL import Image
 
 
 class SAM3VideoClient:
+    def __init__(self, server="http://127.0.0.1:9000", model="segment_anything_3_video"):
 
-
-    def __init__(
-        self,
-        server="http://127.0.0.1:9000",
-        model="segment_anything_3_video"
-    ):
-
-        self.server=server.rstrip("/")
-        self.model=model
-
-
+        self.server = server.rstrip("/")
+        self.model = model
 
     ########################################
     # image -> base64
     ########################################
 
-    def encode_image(
-        self,
-        path
-    ):
+    def encode_image(self, path):
 
-        with open(path,"rb") as f:
-
-            return base64.b64encode(
-                f.read()
-            ).decode()
-
-
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
 
     ########################################
     # load images
     ########################################
 
-    def load_images(
-        self,
-        image_dir
-    ):
+    def load_images(self, image_dir):
 
+        images = []
 
-        images=[]
+        for name in sorted(os.listdir(image_dir)):
+            if name.lower().endswith((".jpg", ".png", ".jpeg")):
+                images.append(os.path.join(image_dir, name))
 
-
-        for name in sorted(
-            os.listdir(image_dir)
-        ):
-
-            if name.lower().endswith(
-                (
-                    ".jpg",
-                    ".png",
-                    ".jpeg"
-                )
-            ):
-
-                images.append(
-                    os.path.join(
-                        image_dir,
-                        name
-                    )
-                )
-
-
-        print(
-            "frames:",
-            len(images)
-        )
-
+        print("frames:", len(images))
 
         return images
-
-
-
 
     ########################################
     # init
     ########################################
 
-    def init_sequence(
-        self,
-        images
-    ):
+    def init_sequence(self, images):
 
-
-        frames=[]
-
+        frames = []
 
         for img in images:
+            frames.append(self.encode_image(img))
 
-            frames.append(
-                self.encode_image(img)
-            )
+        payload = {"model": self.model, "frames": frames, "start_frame_index": 0}
 
+        r = requests.post(self.server + "/v1/video/init", json=payload, timeout=300)
 
-        payload={
+        result = r.json()
 
-            "model":
-                self.model,
-
-            "frames":
-                frames,
-
-            "start_frame_index":
-                0
-
-        }
-
-
-        r=requests.post(
-
-            self.server+
-            "/v1/video/init",
-
-            json=payload,
-
-            timeout=300
-
-        )
-
-
-        result=r.json()
-
-
-        print(
-            "INIT:",
-            result
-        )
-
+        print("INIT:", result)
 
         if not result.get("success"):
-
-            raise RuntimeError(
-                result
-            )
-
+            raise RuntimeError(result)
 
         return result["data"]["session_id"]
-
-
-
-
 
     ########################################
     # text prompt
     ########################################
 
-    def prompt_text(
+    def prompt_text(self, session_id, text, frame_index=0):
 
-        self,
-
-        session_id,
-
-        text,
-
-        frame_index=0
-
-    ):
-
-
-        payload={
-
-
-            "session_id":
-                session_id,
-
-
-            "model":
-                self.model,
-
-
-            "frame_index":
-                frame_index,
-
-
-            "text_prompt":
-                text,
-
-
-            "obj_id":
-                1
-
+        payload = {
+            "session_id": session_id,
+            "model": self.model,
+            "frame_index": frame_index,
+            "text_prompt": text,
+            "obj_id": 1,
         }
 
+        r = requests.post(self.server + "/v1/video/prompt", json=payload, timeout=300)
 
-        r=requests.post(
+        result = r.json()
 
-            self.server+
-            "/v1/video/prompt",
+        print("PROMPT:", result)
 
-            json=payload,
-
-            timeout=300
-
-        )
-
-
-        result=r.json()
-
-
-        print(
-            "PROMPT:",
-            result
-        )
-
-
-        if not result.get(
-            "success",
-            False
-        ):
-
+        if not result.get("success", False):
             return None
 
+        masks = result.get("data", {}).get("masks", [])
 
-
-        masks=result.get(
-            "data",
-            {}
-        ).get(
-            "masks",
-            []
-        )
-
-
-        if len(masks)==0:
-
-            print(
-                "No object:",
-                text
-            )
+        if len(masks) == 0:
+            print("No object:", text)
 
             return None
-
 
         return result
-
-
-
-
-
 
     ########################################
     # propagate
     ########################################
 
-    def propagate(
+    def propagate(self, session_id, num_frames):
 
-        self,
+        payload = {"session_id": session_id, "model": self.model, "start_frame": 0, "end_frame": num_frames - 1}
 
-        session_id,
+        r = requests.post(self.server + "/v1/video/propagate", json=payload, timeout=300)
 
-        num_frames
+        result = r.json()
 
-    ):
+        print("PROPAGATE:", result)
 
-
-
-        payload={
-
-
-            "session_id":
-                session_id,
-
-
-            "model":
-                self.model,
-
-
-            "start_frame":
-                0,
-
-
-            "end_frame":
-                num_frames-1
-
-        }
-
-
-
-
-        r=requests.post(
-
-            self.server+
-            "/v1/video/propagate",
-
-            json=payload,
-
-            timeout=300
-
-        )
-
-
-        result=r.json()
-
-
-        print(
-            "PROPAGATE:",
-            result
-        )
-
-
-
-        if not result.get(
-            "success",
-            False
-        ):
-
-
-            raise RuntimeError(
-
-                result.get(
-                    "error",
-                    {}
-                ).get(
-                    "message",
-                    "propagate failed"
-                )
-
-            )
-
+        if not result.get("success", False):
+            raise RuntimeError(result.get("error", {}).get("message", "propagate failed"))
 
         return result["data"]["task_id"]
-
-
-
-
-
 
     ########################################
     # wait
     ########################################
 
-    def wait(
-
-        self,
-
-        task_id
-
-    ):
-
+    def wait(self, task_id):
 
         while True:
+            r = requests.get(self.server + "/v1/video/status/" + task_id, timeout=60)
 
+            result = r.json()
 
-            r=requests.get(
+            print(result)
 
-                self.server+
-                "/v1/video/status/"
-                +
-                task_id,
+            data = result.get("data", {})
 
-                timeout=60
+            status = data.get("status")
 
-            )
-
-
-            result=r.json()
-
-
-            print(
-                result
-            )
-
-
-            data=result.get(
-                "data",
-                {}
-            )
-
-
-            status=data.get(
-                "status"
-            )
-
-
-            if status=="completed":
-
+            if status == "completed":
                 return data
 
-
-
-            if status in [
-                "failed",
-                "cancelled"
-            ]:
-
-                raise RuntimeError(
-                    result
-                )
-
-
+            if status in ["failed", "cancelled"]:
+                raise RuntimeError(result)
 
             time.sleep(2)
-
-
-
-
 
     ########################################
     # save mask + YOLOv8-seg
@@ -421,17 +152,7 @@ class SAM3VideoClient:
     # detected / undetected
     ########################################
 
-    def save_results(
-
-            self,
-
-            result,
-
-            image_paths,
-
-            class_id=0
-
-    ):
+    def save_results(self, result, image_paths, class_id=0):
 
         ####################################
         # 创建父目录
@@ -441,68 +162,34 @@ class SAM3VideoClient:
 
         undetected_root = "./undetected"
 
-        detected_vis = os.path.join(
-            detected_root,
-            "vis"
-        )
+        detected_vis = os.path.join(detected_root, "vis")
 
-        detected_label = os.path.join(
-            detected_root,
-            "labels"
-        )
+        detected_label = os.path.join(detected_root, "labels")
 
-        undetected_vis = os.path.join(
-            undetected_root,
-            "vis"
-        )
+        undetected_vis = os.path.join(undetected_root, "vis")
 
-        undetected_label = os.path.join(
-            undetected_root,
-            "labels"
-        )
+        undetected_label = os.path.join(undetected_root, "labels")
 
-        for d in [
-
-            detected_vis,
-            detected_label,
-            undetected_vis,
-            undetected_label
-
-        ]:
-            os.makedirs(
-                d,
-                exist_ok=True
-            )
+        for d in [detected_vis, detected_label, undetected_vis, undetected_label]:
+            os.makedirs(d, exist_ok=True)
 
         ####################################
         # 获取结果
         ####################################
 
-        results = result.get(
-            "results",
-            {}
-        )
+        results = result.get("results", {})
 
-        print(
-            "RESULT FRAMES:",
-            len(results)
-        )
+        print("RESULT FRAMES:", len(results))
 
         ####################################
         # 遍历每帧
         ####################################
 
         for frame_id, frame_data in results.items():
-
             try:
-
                 idx = int(frame_id)
 
-                img = Image.open(
-                    image_paths[idx]
-                ).convert(
-                    "RGB"
-                )
+                img = Image.open(image_paths[idx]).convert("RGB")
 
                 img = np.array(img)
 
@@ -510,24 +197,13 @@ class SAM3VideoClient:
 
                 overlay = img.copy()
 
-                masks = frame_data.get(
-                    "masks",
-                    []
-                )
+                masks = frame_data.get("masks", [])
 
                 ################################
                 # 是否检测到目标
                 ################################
 
-                detected = (
-
-                        masks is not None
-
-                        and
-
-                        len(masks) > 0
-
-                )
+                detected = masks is not None and len(masks) > 0
 
                 yolo_lines = []
 
@@ -536,32 +212,16 @@ class SAM3VideoClient:
                 ################################
 
                 for obj in masks:
+                    points = obj.get("points", [])
 
-                    points = obj.get(
-                        "points",
-                        []
-                    )
+                    label = obj.get("label", "obj")
 
-                    label = obj.get(
-                        "label",
-                        "obj"
-                    )
-
-                    score = obj.get(
-                        "score",
-                        0
-                    )
+                    score = obj.get("score", 0)
 
                     if len(points) < 3:
                         continue
 
-                    polygon = np.array(
-
-                        points,
-
-                        dtype=np.int32
-
-                    )
+                    polygon = np.array(points, dtype=np.int32)
 
                     ################################
                     # YOLOv8-seg格式
@@ -574,61 +234,21 @@ class SAM3VideoClient:
 
                         ny = float(y) / h
 
-                        yolo_points.append(
+                        yolo_points.append(f"{nx:.6f}")
 
-                            f"{nx:.6f}"
+                        yolo_points.append(f"{ny:.6f}")
 
-                        )
-
-                        yolo_points.append(
-
-                            f"{ny:.6f}"
-
-                        )
-
-                    yolo_lines.append(
-
-                        str(class_id)
-
-                        +
-
-                        " "
-
-                        +
-
-                        " ".join(
-                            yolo_points
-                        )
-
-                    )
+                    yolo_lines.append(str(class_id) + " " + " ".join(yolo_points))
 
                     ################################
                     # 绘制mask
                     ################################
 
-                    mask = np.zeros(
+                    mask = np.zeros(img.shape[:2], dtype=np.uint8)
 
-                        img.shape[:2],
+                    cv2.fillPoly(mask, [polygon], 255)
 
-                        dtype=np.uint8
-
-                    )
-
-                    cv2.fillPoly(
-
-                        mask,
-
-                        [
-                            polygon
-                        ],
-
-                        255
-
-                    )
-
-                    color = np.zeros_like(
-                        img
-                    )
+                    color = np.zeros_like(img)
 
                     color[:, :, 1] = 255
 
@@ -636,53 +256,20 @@ class SAM3VideoClient:
 
                     area = mask > 0
 
-                    overlay[area] = (
+                    overlay[area] = img[area] * (1 - alpha) + color[area] * alpha
 
-                            img[area] * (1 - alpha)
-
-                            +
-
-                            color[area] * alpha
-
-                    )
-
-                    cv2.polylines(
-
-                        overlay,
-
-                        [
-                            polygon
-                        ],
-
-                        True,
-
-                        (255, 0, 0),
-
-                        3
-
-                    )
+                    cv2.polylines(overlay, [polygon], True, (255, 0, 0), 3)
 
                     x0, y0 = polygon[0]
 
                     cv2.putText(
-
                         overlay,
-
                         f"{label}:{score:.2f}",
-
-                        (
-                            int(x0),
-                            int(y0)
-                        ),
-
+                        (int(x0), int(y0)),
                         cv2.FONT_HERSHEY_SIMPLEX,
-
                         1,
-
                         (255, 255, 255),
-
-                        2
-
+                        2,
                     )
 
                 ####################################
@@ -690,14 +277,11 @@ class SAM3VideoClient:
                 ####################################
 
                 if detected:
-
                     vis_dir = detected_vis
 
                     label_dir = detected_label
 
-
                 else:
-
                     vis_dir = undetected_vis
 
                     label_dir = undetected_label
@@ -708,96 +292,29 @@ class SAM3VideoClient:
 
                 img_name = f"{idx:06d}_mask.jpg"
 
-                img_save = os.path.join(
+                img_save = os.path.join(vis_dir, img_name)
 
-                    vis_dir,
-
-                    img_name
-
-                )
-
-                Image.fromarray(
-                    overlay
-                ).save(
-                    img_save
-                )
+                Image.fromarray(overlay).save(img_save)
 
                 ####################################
                 # 保存YOLO label
                 ####################################
 
-                txt_name = os.path.splitext(
+                txt_name = os.path.splitext(os.path.basename(image_paths[idx]))[0] + ".txt"
 
-                    os.path.basename(
-                        image_paths[idx]
-                    )
+                txt_save = os.path.join(label_dir, txt_name)
 
-                )[0] + ".txt"
-
-                txt_save = os.path.join(
-
-                    label_dir,
-
-                    txt_name
-
-                )
-
-                with open(
-
-                        txt_save,
-
-                        "w"
-
-                ) as f:
-
-                    for line in yolo_lines:
-                        f.write(
-
-                            line + "\n"
-
-                        )
+                with open(txt_save, "w") as f:
+                    f.writelines(line + "\n" for line in yolo_lines)
 
                 if detected:
-
-                    print(
-
-                        "[DETECTED]",
-
-                        img_save,
-
-                        txt_save
-
-                    )
-
+                    print("[DETECTED]", img_save, txt_save)
 
                 else:
-
-                    print(
-
-                        "[UNDETECTED]",
-
-                        img_save,
-
-                        txt_save
-
-                    )
-
-
+                    print("[UNDETECTED]", img_save, txt_save)
 
             except Exception as e:
-
-                print(
-
-                    "frame error:",
-
-                    frame_id,
-
-                    e
-
-                )
-
-
-
+                print("frame error:", frame_id, e)
 
 
 ############################################
@@ -805,80 +322,26 @@ class SAM3VideoClient:
 ############################################
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
+    client = SAM3VideoClient(server="http://172.16.50.229:9000")
 
+    image_dir = "./images"
 
-    client=SAM3VideoClient(
+    images = client.load_images(image_dir)
 
-        server=
-        "http://172.16.50.229:9000"
+    session = client.init_sequence(images)
 
-    )
+    target = "carpet"
 
-
-
-    image_dir="./images"
-
-
-
-    images=client.load_images(
-        image_dir
-    )
-
-
-
-    session=client.init_sequence(
-        images
-    )
-
-
-
-    target="carpet"
-
-
-
-    prompt=client.prompt_text(
-
-        session,
-
-        target
-
-    )
-
-
+    prompt = client.prompt_text(session, target)
 
     if prompt is None:
+        print("目标不存在，退出")
 
+        sys.exit(0)
 
-        print(
-            "目标不存在，退出"
-        )
+    task = client.propagate(session, len(images))
 
-        exit(0)
+    result = client.wait(task)
 
-
-
-
-    task=client.propagate(
-
-        session,
-
-        len(images)
-
-    )
-
-
-
-    result=client.wait(
-        task
-    )
-
-    client.save_results(
-
-        result,
-
-        images,
-
-        class_id=0
-
-    )
+    client.save_results(result, images, class_id=0)
