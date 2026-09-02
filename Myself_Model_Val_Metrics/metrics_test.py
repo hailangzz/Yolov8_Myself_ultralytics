@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # 地毯检测模型效果测试
 
     python \
-    Myself_Model_Val_Metrics/test.py \
+    Myself_Model_Val_Metrics/predict_seg_images_target_classify.py \
     --model_paths \
     Myself_train_finetune_model/runs/carpet_seg_finetune/stage1_head_only/weights/best.pt\
     Myself_train_finetune_model/runs/carpet_seg_finetune/stage2_full_finetune/weights/best.pt \
