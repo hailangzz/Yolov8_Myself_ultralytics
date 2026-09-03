@@ -73,8 +73,38 @@ class DetectionTrainer(BaseTrainer):
         Returns:
             (Dataset): YOLO dataset object configured for the specified mode.
         """
-        gs = max(int(unwrap_model(self.model).stride.max() if self.model else 0), 32)
-        return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
+        gs = max(
+            int(unwrap_model(self.model).stride.max() if self.model else 0),
+            32,
+        )
+
+        # Hard Case 只用于训练集
+        hard_case_file = None
+
+        if mode == "train":
+            hard_case_file = getattr(
+                self.args,
+                "hard_case_file",
+                None,
+            )
+
+        hard_case_weight = getattr(
+            self.args,
+            "hard_case_weight",
+            1.0,
+        )
+
+        return build_yolo_dataset(
+            self.args,
+            img_path,
+            batch,
+            self.data,
+            mode=mode,
+            rect=mode == "val",
+            stride=gs,
+            hard_case_file=hard_case_file,
+            hard_case_weight=hard_case_weight,
+        )
 
     def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
         """Construct and return dataloader for the specified mode.
@@ -120,9 +150,9 @@ class DetectionTrainer(BaseTrainer):
         if self.args.multi_scale:
             imgs = batch["img"]
             sz = (
-                random.randrange(int(self.args.imgsz * 0.5), int(self.args.imgsz * 1.5 + self.stride))
-                // self.stride
-                * self.stride
+                    random.randrange(int(self.args.imgsz * 0.5), int(self.args.imgsz * 1.5 + self.stride))
+                    // self.stride
+                    * self.stride
             )  # size
             sf = sz / max(imgs.shape[2:])  # scale factor
             if sf != 1:

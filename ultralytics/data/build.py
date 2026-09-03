@@ -32,6 +32,9 @@ from ultralytics.data.utils import IMG_FORMATS, VID_FORMATS
 from ultralytics.utils import RANK, colorstr
 from ultralytics.utils.checks import check_file
 from ultralytics.utils.torch_utils import TORCH_2_0
+from torch.utils.data import WeightedRandomSampler
+from ultralytics.data.hard_case_dataset import HardCaseYOLODataset
+from ultralytics.utils import LOGGER
 
 
 class InfiniteDataLoader(dataloader.DataLoader):
@@ -145,12 +148,12 @@ class ContiguousDistributedSampler(torch.utils.data.Sampler):
     """
 
     def __init__(
-        self,
-        dataset: Dataset,
-        num_replicas: int | None = None,
-        batch_size: int | None = None,
-        rank: int | None = None,
-        shuffle: bool = False,
+            self,
+            dataset: Dataset,
+            num_replicas: int | None = None,
+            batch_size: int | None = None,
+            rank: int | None = None,
+            shuffle: bool = False,
     ) -> None:
         """Initialize the sampler with dataset and distributed training parameters."""
         if num_replicas is None:
@@ -213,32 +216,151 @@ class ContiguousDistributedSampler(torch.utils.data.Sampler):
         self.epoch = epoch
 
 
+class WeightedDistributedSampler(torch.utils.data.Sampler):
+    """
+    Distributed weighted sampler for Hard Case training.
+    """
+
+    def __init__(
+            self,
+            dataset,
+            num_replicas=None,
+            rank=None,
+            num_samples=None,
+            replacement=True,
+            seed=6148914691236517205,
+    ):
+        if num_replicas is None:
+            num_replicas = (
+                dist.get_world_size()
+                if dist.is_initialized()
+                else 1
+            )
+
+        if rank is None:
+            rank = (
+                dist.get_rank()
+                if dist.is_initialized()
+                else 0
+            )
+
+        self.dataset = dataset
+        self.num_replicas = num_replicas
+        self.rank = rank
+        self.replacement = replacement
+        self.seed = seed
+
+        weights = torch.as_tensor(
+            dataset.sample_weights,
+            dtype=torch.double,
+        )
+
+        if len(weights) != len(dataset):
+            raise ValueError(
+                "Length of sample_weights must equal dataset length."
+            )
+
+        if torch.any(weights <= 0):
+            raise ValueError(
+                "All sample weights must be > 0."
+            )
+
+        self.weights = weights
+
+        if num_samples is None:
+            num_samples = math.ceil(
+                len(dataset) / num_replicas
+            )
+
+        self.num_samples = num_samples
+        self.total_size = (
+                self.num_samples * self.num_replicas
+        )
+
+        self.epoch = 0
+
+    def __iter__(self):
+
+        generator = torch.Generator()
+
+        generator.manual_seed(
+            self.seed + self.epoch
+        )
+
+        indices = torch.multinomial(
+            self.weights,
+            self.total_size,
+            self.replacement,
+            generator=generator,
+        ).tolist()
+
+        indices = indices[
+                  self.rank:self.total_size:self.num_replicas
+                  ]
+
+        return iter(indices)
+
+    def __len__(self):
+        return self.num_samples
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
+
+
 def seed_worker(worker_id: int) -> None:
     """Set dataloader worker seed for reproducibility across worker processes."""
-    worker_seed = torch.initial_seed() % 2**32
+    worker_seed = torch.initial_seed() % 2 ** 32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
 
 def build_yolo_dataset(
-    cfg: IterableSimpleNamespace,
-    img_path: str,
-    batch: int,
-    data: dict[str, Any],
-    mode: str = "train",
-    rect: bool = False,
-    stride: int = 32,
-    multi_modal: bool = False,
+        cfg: IterableSimpleNamespace,
+        img_path: str,
+        batch: int,
+        data: dict[str, Any],
+        mode: str = "train",
+        rect: bool = False,
+        stride: int = 32,
+        multi_modal: bool = False,
+        hard_case_file: str | Path | None = None,
+        hard_case_weight: float = 1.0,
 ) -> Dataset:
-    """Build and return a YOLO dataset based on configuration parameters."""
-    dataset = YOLOMultiModalDataset if multi_modal else YOLODataset
-    return dataset(
+    """Build and return a YOLO dataset."""
+
+    # -----------------------------
+    # Select dataset implementation
+    # -----------------------------
+
+    if multi_modal:
+
+        dataset_cls = YOLOMultiModalDataset
+
+        if hard_case_file is not None:
+            LOGGER.warning(
+                "[HardCase] hard_case_file is ignored "
+                "because multi_modal=True."
+            )
+
+    elif hard_case_file is not None:
+
+        dataset_cls = HardCaseYOLODataset
+
+    else:
+
+        dataset_cls = YOLODataset
+
+    # -----------------------------
+    # Common arguments
+    # -----------------------------
+
+    kwargs = dict(
         img_path=img_path,
         imgsz=cfg.imgsz,
         batch_size=batch,
-        augment=mode == "train",  # augmentation
-        hyp=cfg,  # TODO: probably add a get_hyps_from_cfg function
-        rect=cfg.rect or rect,  # rectangular batches
+        augment=mode == "train",
+        hyp=cfg,
+        rect=cfg.rect or rect,
         cache=cfg.cache or None,
         single_cls=cfg.single_cls or False,
         stride=stride,
@@ -250,16 +372,31 @@ def build_yolo_dataset(
         fraction=cfg.fraction if mode == "train" else 1.0,
     )
 
+    # -----------------------------
+    # Hard Case arguments
+    # -----------------------------
+
+    if dataset_cls is HardCaseYOLODataset:
+        if hard_case_weight <= 0:
+            raise ValueError(
+                f"hard_case_weight must be > 0, got {hard_case_weight}"
+            )
+
+        kwargs["hard_case_file"] = hard_case_file
+        kwargs["hard_case_weight"] = hard_case_weight
+
+    return dataset_cls(**kwargs)
+
 
 def build_grounding(
-    cfg: IterableSimpleNamespace,
-    img_path: str,
-    json_file: str,
-    batch: int,
-    mode: str = "train",
-    rect: bool = False,
-    stride: int = 32,
-    max_samples: int = 80,
+        cfg: IterableSimpleNamespace,
+        img_path: str,
+        json_file: str,
+        batch: int,
+        mode: str = "train",
+        rect: bool = False,
+        stride: int = 32,
+        max_samples: int = 80,
 ) -> Dataset:
     """Build and return a GroundingDataset based on configuration parameters."""
     return GroundingDataset(
@@ -283,13 +420,13 @@ def build_grounding(
 
 
 def build_dataloader(
-    dataset,
-    batch: int,
-    workers: int,
-    shuffle: bool = True,
-    rank: int = -1,
-    drop_last: bool = False,
-    pin_memory: bool = True,
+        dataset,
+        batch: int,
+        workers: int,
+        shuffle: bool = True,
+        rank: int = -1,
+        drop_last: bool = False,
+        pin_memory: bool = True,
 ) -> InfiniteDataLoader:
     """Create and return an InfiniteDataLoader or DataLoader for training or validation.
 
@@ -311,24 +448,94 @@ def build_dataloader(
         >>> dataloader = build_dataloader(dataset, batch=16, workers=4, shuffle=True)
     """
     batch = min(batch, len(dataset))
-    nd = torch.cuda.device_count()  # number of CUDA devices
-    nw = min(os.cpu_count() // max(nd, 1), workers)  # number of workers
-    sampler = (
-        None
-        if rank == -1
-        else distributed.DistributedSampler(dataset, shuffle=shuffle)
-        if shuffle
-        else ContiguousDistributedSampler(dataset)
-    )
+
+    nd = torch.cuda.device_count()
+    nw = min(os.cpu_count() // max(nd, 1), workers)
+
+    # =========================================================
+    # Hard Case Weighted Sampling
+    # =========================================================
+
+    if shuffle and hasattr(dataset, "sample_weights"):
+
+        LOGGER.info(
+            f"[HardCase] Weighted sampler enabled: "
+            f"dataset={len(dataset)}, "
+            f"hard_cases={len(getattr(dataset, 'hard_case_indices', []))}, "
+            f"weight={getattr(dataset, 'hard_case_weight', None)}, "
+            f"rank={rank}"
+        )
+
+        if rank == -1:
+            # -------------------------------------------------
+            # Single GPU
+            # -------------------------------------------------
+
+            sampler = WeightedRandomSampler(
+                weights=torch.as_tensor(
+                    dataset.sample_weights,
+                    dtype=torch.double,
+                ),
+                num_samples=len(dataset),
+                replacement=True,
+            )
+
+            LOGGER.info(
+                "[HardCase] Using WeightedRandomSampler"
+            )
+
+
+        else:
+            # -------------------------------------------------
+            # DDP / Multi GPU
+            # -------------------------------------------------
+
+            sampler = WeightedDistributedSampler(
+                dataset=dataset,
+                num_replicas=dist.get_world_size(),
+                rank=rank,
+                num_samples=math.ceil(
+                    len(dataset) / dist.get_world_size()
+                ),
+                replacement=True,
+            )
+
+            LOGGER.info(
+                f"[HardCase] Using WeightedDistributedSampler "
+                f"rank={rank}"
+            )
+
+        shuffle = False
+
+    # =========================================================
+    # 普通 YOLO
+    # =========================================================
+
+    else:
+
+        sampler = (
+            None
+            if rank == -1
+            else distributed.DistributedSampler(
+                dataset,
+                shuffle=shuffle,
+            )
+            if shuffle
+            else ContiguousDistributedSampler(dataset)
+        )
+
     generator = torch.Generator()
-    generator.manual_seed(6148914691236517205 + RANK)
+    generator.manual_seed(
+        6148914691236517205 + RANK
+    )
+
     return InfiniteDataLoader(
         dataset=dataset,
         batch_size=batch,
         shuffle=shuffle and sampler is None,
         num_workers=nw,
         sampler=sampler,
-        prefetch_factor=4 if nw > 0 else None,  # increase over default 2
+        prefetch_factor=4 if nw > 0 else None,
         pin_memory=nd > 0 and pin_memory,
         collate_fn=getattr(dataset, "collate_fn", None),
         worker_init_fn=seed_worker,
@@ -338,7 +545,7 @@ def build_dataloader(
 
 
 def check_source(
-    source: str | int | Path | list | tuple | np.ndarray | Image.Image | torch.Tensor,
+        source: str | int | Path | list | tuple | np.ndarray | Image.Image | torch.Tensor,
 ) -> tuple[Any, bool, bool, bool, bool, bool]:
     """Check the type of input source and return corresponding flag values.
 
@@ -366,7 +573,7 @@ def check_source(
         source_lower = source.lower()
         is_url = source_lower.startswith(("https://", "http://", "rtsp://", "rtmp://", "tcp://"))
         is_file = (urlsplit(source_lower).path if is_url else source_lower).rpartition(".")[-1] in (
-            IMG_FORMATS | VID_FORMATS
+                IMG_FORMATS | VID_FORMATS
         )
         webcam = source.isnumeric() or source.endswith(".streams") or (is_url and not is_file)
         screenshot = source_lower == "screen"
@@ -388,11 +595,11 @@ def check_source(
 
 
 def load_inference_source(
-    source: str | int | Path | list | tuple | np.ndarray | Image.Image | torch.Tensor,
-    batch: int = 1,
-    vid_stride: int = 1,
-    buffer: bool = False,
-    channels: int = 3,
+        source: str | int | Path | list | tuple | np.ndarray | Image.Image | torch.Tensor,
+        batch: int = 1,
+        vid_stride: int = 1,
+        buffer: bool = False,
+        channels: int = 3,
 ):
     """Load an inference source for object detection and apply necessary transformations.
 

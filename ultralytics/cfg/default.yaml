@@ -126,5 +126,11 @@ erasing: 0.4 # (float) random erasing probability for classification (0–0.9), 
 # Custom config.yaml ---------------------------------------------------------------------------------------------------
 cfg: # (str, optional) path to a config.yaml that overrides defaults
 
+# Hard Case Fine-tuning -----------------------------------------------------------------------------------------------
+
+hard_case_file: # (str, optional) path to hard case image list
+hard_case_weight: 5.0 # (float) sampling weight for hard case samples
+
 # Tracker settings ------------------------------------------------------------------------------------------------------
 tracker: botsort.yaml # (str) tracker config file: botsort.yaml or bytetrack.yaml
+

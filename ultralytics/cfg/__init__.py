@@ -159,6 +159,7 @@ CFG_FLOAT_KEYS = frozenset(
         "time",
         "workspace",
         "batch",
+        "hard_case_weight",
     }
 )
 CFG_FRACTION_KEYS = frozenset(
@@ -277,7 +278,7 @@ def cfg2dict(cfg: str | Path | dict | SimpleNamespace) -> dict:
 
 
 def get_cfg(
-    cfg: str | Path | dict | SimpleNamespace = DEFAULT_CFG_DICT, overrides: dict | None = None
+        cfg: str | Path | dict | SimpleNamespace = DEFAULT_CFG_DICT, overrides: dict | None = None
 ) -> SimpleNamespace:
     """Load and merge configuration data from a file or dictionary, with optional overrides.
 
@@ -461,7 +462,7 @@ def _handle_deprecation(custom: dict) -> dict:
 
 
 def check_dict_alignment(
-    base: dict, custom: dict, e: Exception | None = None, allowed_custom_keys: set | None = None
+        base: dict, custom: dict, e: Exception | None = None, allowed_custom_keys: set | None = None
 ) -> None:
     """Check alignment between custom and base configuration dictionaries, handling deprecated keys and providing error
     messages for mismatched keys.
